@@ -1,0 +1,237 @@
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { randomUUID } from "crypto";
+import type { GenerationMode } from "@/app/lib/generation-mode";
+import {
+  DEFAULT_PRODUCTION_DURATION_SEC,
+  resolveDurationForMode,
+} from "@/app/lib/generation-mode";
+import type { VeoGenerateRequest } from "@/app/lib/shot-lock";
+import {
+  getShotLockById,
+  ShotLockValidationError,
+  updateProductionResult,
+  validateProductionRequest,
+} from "@/app/lib/shot-lock";
+import {
+  readImageBuffer,
+  saveFirstFrameAsset,
+  saveVideoClipAsset,
+} from "@/app/lib/asset-library";
+import { isPreviewMode } from "@/app/lib/workspace-mode";
+import { extractFirstFrameFromVideo } from "./first-frame";
+import { generateVeoVideoFromPrompt, VeoApiError } from "./client";
+import { assertVeoConfigured, getVeoConfig, isVeoConfigured } from "./config";
+
+export type VeoGenerateResult = {
+  taskId: string;
+  status: "completed" | "failed";
+  videoUrl: string | null;
+  firstFrameUrl?: string;
+  firstFrameAssetId?: string;
+  provider: "veo";
+  workspaceMode: VeoGenerateRequest["workspaceMode"];
+  mode: GenerationMode;
+  type: VeoGenerateRequest["type"];
+  seed: number;
+  error?: string;
+  shotLockId?: string;
+};
+
+function randomSeed(): number {
+  return Math.floor(Math.random() * 2_147_483_647);
+}
+
+function bufferToDataUrl(buffer: Buffer, mime: string): string {
+  return `data:${mime};base64,${buffer.toString("base64")}`;
+}
+
+function extractPreviewFirstFrame(
+  videoBuffer: Buffer,
+  shotId: string
+): string | undefined {
+  const tmpVideo = path.join(os.tmpdir(), `veo-${shotId}-${randomUUID()}.mp4`);
+  const tmpFrame = path.join(os.tmpdir(), `frame-${shotId}-${randomUUID()}.png`);
+  try {
+    fs.writeFileSync(tmpVideo, videoBuffer);
+    extractFirstFrameFromVideo(tmpVideo, tmpFrame);
+    const frameBuffer = fs.readFileSync(tmpFrame);
+    return bufferToDataUrl(frameBuffer, "image/png");
+  } catch {
+    return undefined;
+  } finally {
+    for (const fp of [tmpVideo, tmpFrame]) {
+      try {
+        if (fs.existsSync(fp)) fs.unlinkSync(fp);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+export async function generateWithVeo(
+  request: VeoGenerateRequest
+): Promise<VeoGenerateResult> {
+  const config = getVeoConfig();
+  if (!isVeoConfigured(config)) {
+    return {
+      taskId: `veo-unconfigured-${Date.now()}`,
+      status: "failed",
+      videoUrl: null,
+      provider: "veo",
+      workspaceMode: request.workspaceMode,
+      mode: request.mode,
+      type: request.type,
+      seed: request.seed ?? randomSeed(),
+      error: "未配置 VEO_API_KEY",
+    };
+  }
+
+  assertVeoConfigured(config);
+
+  const preview = isPreviewMode(request.workspaceMode);
+  const mode = request.mode;
+  const type = request.type;
+  const durationSec =
+    request.durationSec ??
+    (mode === "production" && request.shotLockId
+      ? undefined
+      : resolveDurationForMode(mode));
+
+  let seed = request.seed ?? randomSeed();
+  let prompt = request.prompt;
+  let lockId: string | undefined;
+
+  if (mode === "production") {
+    if (preview) {
+      throw new ShotLockValidationError("预览模式不支持正式生成");
+    }
+    if (!request.shotLockId) {
+      throw new ShotLockValidationError("正式模式需要 shotLockId");
+    }
+    const lock = getShotLockById(request.shotLockId);
+    if (!lock) throw new ShotLockValidationError("Shot Lock 不存在");
+    validateProductionRequest(request, lock);
+    seed = lock.snapshot.seed;
+    prompt = lock.snapshot.prompt;
+    lockId = lock.id;
+  }
+
+  const finalDuration =
+    durationSec ??
+    (mode === "production" && request.shotLockId
+      ? getShotLockById(request.shotLockId!)!.snapshot.duration
+      : resolveDurationForMode(mode));
+
+  if (type === "i2v") {
+    if (preview) {
+      if (!request.imageBase64?.trim()) {
+        throw new Error("预览模式 i2v 需要 imageBase64");
+      }
+      prompt = `${prompt}\n[Reference image attached]`;
+    } else if (request.imageAssetId) {
+      readImageBuffer(request.imageAssetId);
+      prompt = `${prompt}\n[Reference image asset: ${request.imageAssetId}]`;
+    } else if (mode === "test") {
+      throw new Error("i2v 测试模式需要 imageAssetId");
+    }
+  }
+
+  try {
+    const { taskId, buffer } = await generateVeoVideoFromPrompt(
+      prompt,
+      undefined,
+      finalDuration
+    );
+
+    if (preview) {
+      const firstFrameUrl =
+        mode === "test" ? extractPreviewFirstFrame(buffer, request.shotId) : undefined;
+      return {
+        taskId,
+        status: "completed",
+        videoUrl: bufferToDataUrl(buffer, "video/mp4"),
+        firstFrameUrl,
+        provider: "veo",
+        workspaceMode: request.workspaceMode,
+        mode,
+        type,
+        seed,
+      };
+    }
+
+    const clip = saveVideoClipAsset({
+      shotId: request.shotId,
+      mode,
+      buffer,
+      taskId,
+      durationSec: finalDuration,
+    });
+
+    let firstFrameUrl: string | undefined;
+    let firstFrameAssetId: string | undefined;
+
+    if (mode === "test" && fs.existsSync(clip.filepath) && buffer.length > 20) {
+      const tmpFrame = path.join(os.tmpdir(), `frame-${randomUUID()}.png`);
+      try {
+        extractFirstFrameFromVideo(clip.filepath, tmpFrame);
+        const frameBuffer = fs.readFileSync(tmpFrame);
+        const ff = saveFirstFrameAsset({
+          shotId: request.shotId,
+          sourceClipUrl: clip.publicUrl,
+          buffer: frameBuffer,
+        });
+        firstFrameUrl = ff.publicUrl;
+        firstFrameAssetId = ff.id;
+      } catch {
+        /* skip */
+      } finally {
+        try {
+          if (fs.existsSync(tmpFrame)) fs.unlinkSync(tmpFrame);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    if (mode === "production" && lockId) {
+      updateProductionResult(lockId, taskId, clip.publicUrl);
+    }
+
+    return {
+      taskId,
+      status: "completed",
+      videoUrl: clip.publicUrl,
+      firstFrameUrl,
+      firstFrameAssetId,
+      provider: "veo",
+      workspaceMode: request.workspaceMode,
+      mode,
+      type,
+      seed,
+      shotLockId: lockId,
+    };
+  } catch (err) {
+    const message =
+      err instanceof VeoApiError || err instanceof ShotLockValidationError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    return {
+      taskId: `veo-failed-${Date.now()}`,
+      status: "failed",
+      videoUrl: null,
+      provider: "veo",
+      workspaceMode: request.workspaceMode,
+      mode,
+      type,
+      seed,
+      error: message,
+    };
+  }
+}
+
+export { DEFAULT_PRODUCTION_DURATION_SEC };
