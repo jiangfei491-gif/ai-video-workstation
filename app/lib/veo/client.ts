@@ -50,7 +50,7 @@ async function parseErrorResponse(res: Response): Promise<string> {
 function authHeaders(config: VeoConfig): Record<string, string> {
   if (config.apiMode === "vertex") {
     const token = config.accessToken ?? config.apiKey;
-    if (!token) throw new VeoApiError("Vertex AI 缺少 Access Token");
+    if (!token) throw new VeoApiError("Vertex AI 缺少访问令牌");
     return { Authorization: `Bearer ${token}` };
   }
   if (!config.apiKey) throw new VeoApiError("缺少 VEO_API_KEY");
@@ -75,7 +75,7 @@ function buildRequestBody(
   durationSeconds?: number
 ): unknown {
   const dur = durationSeconds ?? Number(config.durationSeconds);
-  const allowed = dur <= 4 ? "4" : dur <= 6 ? "6" : "8";
+  const allowed: number = dur <= 4 ? 4 : dur <= 6 ? 6 : 8;
   return {
     instances: [{ prompt }],
     parameters: {
@@ -150,7 +150,7 @@ export async function startVeoGeneration(
   const url =
     config.apiMode === "vertex" ? vertexStartUrl(config) : geminiStartUrl(config);
 
-  onProgress?.(`提交 Veo 生成任务 (${config.modelId})…`);
+  onProgress?.(`提交视频生成任务（${config.modelId}）…`);
 
   const res = await fetch(url, {
     method: "POST",
@@ -164,7 +164,7 @@ export async function startVeoGeneration(
   if (!res.ok) {
     const message = await parseErrorResponse(res);
     throw new VeoApiError(
-      `Veo 提交失败 [${res.status}]: ${message}`,
+      `视频生成提交失败 [${res.status}]：${message}`,
       res.status,
       message
     );
@@ -173,11 +173,11 @@ export async function startVeoGeneration(
   const body = (await res.json()) as { name?: string };
   const operationName = body.name;
   if (!operationName) {
-    throw new VeoApiError("Veo 未返回 operation name", 502, body);
+    throw new VeoApiError("视频生成未返回任务 ID", 502, body);
   }
 
   const taskId = extractTaskId(operationName);
-  onProgress?.(`任务已提交 taskId=${taskId}`);
+  onProgress?.(`任务已提交，任务 ID：${taskId}`);
   return { operationName, taskId };
 }
 
@@ -194,7 +194,7 @@ async function pollGeminiOperation(
   if (!res.ok) {
     const message = await parseErrorResponse(res);
     throw new VeoApiError(
-      `Veo 轮询失败 [${res.status}]: ${message}`,
+      `视频生成轮询失败 [${res.status}]：${message}`,
       res.status,
       message
     );
@@ -212,7 +212,7 @@ async function pollGeminiOperation(
   }
 
   if (done) {
-    onProgress?.("Veo 生成完成，准备下载视频…");
+    onProgress?.("视频生成完成，准备下载…");
     return {
       done: true,
       videoUri: extractVideoUriFromOperation(body) ?? undefined,
@@ -220,7 +220,7 @@ async function pollGeminiOperation(
     };
   }
 
-  onProgress?.("Veo 生成中…");
+  onProgress?.("视频生成中…");
   return { done: false };
 }
 
@@ -241,7 +241,7 @@ async function pollVertexOperation(
   if (!res.ok) {
     const message = await parseErrorResponse(res);
     throw new VeoApiError(
-      `Veo Vertex 轮询失败 [${res.status}]: ${message}`,
+      `Vertex 视频生成轮询失败 [${res.status}]：${message}`,
       res.status,
       message
     );
@@ -256,7 +256,7 @@ async function pollVertexOperation(
   }
 
   if (done) {
-    onProgress?.("Veo 生成完成，准备下载视频…");
+    onProgress?.("视频生成完成，准备下载…");
     return {
       done: true,
       videoUri: extractVideoUriFromOperation(body) ?? undefined,
@@ -264,7 +264,7 @@ async function pollVertexOperation(
     };
   }
 
-  onProgress?.("Veo 生成中…");
+  onProgress?.("视频生成中…");
   return { done: false };
 }
 
@@ -284,12 +284,12 @@ export async function pollVeoOperationUntilDone(
     if (status.done) {
       if (status.error) {
         throw new VeoApiError(
-          status.error.message ?? "Veo 生成失败",
+          status.error.message ?? "视频生成失败",
           status.error.code
         );
       }
       if (!status.videoUri && !status.videoBytes) {
-        throw new VeoApiError("Veo 完成但未返回视频资源");
+        throw new VeoApiError("视频生成完成但未返回视频资源");
       }
       return status;
     }
@@ -298,7 +298,7 @@ export async function pollVeoOperationUntilDone(
   }
 
   throw new VeoApiError(
-    `Veo 生成超时（>${config.pollTimeoutMs}ms），请稍后重试`
+    `视频生成超时（超过 ${Math.round(config.pollTimeoutMs / 1000)} 秒），请稍后重试`
   );
 }
 
@@ -307,7 +307,7 @@ export async function downloadVeoVideo(
   onProgress?: VeoProgressCallback
 ): Promise<Buffer> {
   const config = getVeoConfig();
-  onProgress?.("下载 Veo 视频文件…");
+  onProgress?.("正在下载视频文件…");
 
   const res = await fetch(videoUri, {
     headers: authHeaders(config),
@@ -317,7 +317,7 @@ export async function downloadVeoVideo(
   if (!res.ok) {
     const message = await parseErrorResponse(res);
     throw new VeoApiError(
-      `Veo 视频下载失败 [${res.status}]: ${message}`,
+      `视频下载失败 [${res.status}]：${message}`,
       res.status,
       message
     );
@@ -344,7 +344,7 @@ export async function generateVeoVideoFromPrompt(
   }
 
   if (!result.videoUri) {
-    throw new VeoApiError("Veo 未返回可下载的视频 URI");
+    throw new VeoApiError("视频生成未返回可下载地址");
   }
 
   const buffer = await downloadVeoVideo(result.videoUri, onProgress);

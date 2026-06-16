@@ -1,123 +1,196 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ExportPanel from "@/app/components/workflows/shared/ExportPanel";
 import GenerationModeToggle from "@/app/components/workflows/shared/GenerationModeToggle";
+import LoadingButton from "@/app/components/workflows/shared/LoadingButton";
 import ShotLockPanel from "@/app/components/workflows/shared/ShotLockPanel";
-import WorkspaceModeToggle from "@/app/components/workflows/shared/WorkspaceModeToggle";
-import type { ShotLockRecord } from "@/app/lib/shot-lock";
+import TaskStatusBar from "@/app/components/workflows/shared/TaskStatusBar";
+import VeoProgressPanel from "@/app/components/workflows/shared/VeoProgressPanel";
+import VideoPreviewPanel from "@/app/components/workflows/shared/VideoPreviewPanel";
+import WorkbenchSection from "@/app/components/workflows/shared/WorkbenchSection";
+import StoryboardPanel from "@/app/components/workflows/t2v/StoryboardPanel";
+import VideoSettingsPanel from "@/app/components/workflows/t2v/VideoSettingsPanel";
+import { resolveRequestSeed } from "@/app/lib/generation-params";
 import type { GenerationMode } from "@/app/lib/generation-mode";
-import { DEFAULT_PRODUCTION_DURATION_SEC } from "@/app/lib/generation-mode";
-import type { WorkspaceMode } from "@/app/lib/workspace-mode";
+import { exportT2VProject, exportT2VVideo } from "@/app/lib/export/executors";
+import { runWorkbenchExport, resetExportMeta } from "@/app/lib/export/run-export";
+import { isExportSuccess } from "@/app/lib/export/types";
+import { patchVideoHistoryExport } from "@/app/lib/history/video-store";
+import { syncVideoHistoryFromWorkbench } from "@/app/lib/history/sync-video";
+import { normalizeVeoDurationSec } from "@/app/lib/shot-control/types";
+import {
+  getT2VState,
+  runT2VVeoTask,
+  useT2VWorkbenchStore,
+} from "@/app/lib/workbench-persist/t2v-store";
+import type {
+  DirectorShot,
+  StoryboardShot,
+} from "@/app/lib/workbench-persist/types";
 
 const VEO_MODEL = "veo-3.1-generate-preview";
 
-type DirectorShot = {
-  sceneNumber: number;
-  providerPrompt: string;
-  duration: number;
-};
+function reorderArray<T>(items: T[], from: number, to: number): T[] {
+  const next = [...items];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
 
-type Props = {
-  initialTopic?: string;
-};
+export default function T2VWorkbench() {
+  const { state, patch } = useT2VWorkbenchStore();
+  const [confirmDeleteExport, setConfirmDeleteExport] = useState(false);
 
-export default function T2VWorkbench({ initialTopic = "" }: Props) {
-  const [topic, setTopic] = useState(initialTopic);
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("preview");
-  const [mode, setMode] = useState<GenerationMode>("test");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [director, setDirector] = useState<{
-    title: string;
-    script: string;
-    prompts: DirectorShot[];
-  } | null>(null);
-  const [activeShotIdx, setActiveShotIdx] = useState(0);
-  const [testResult, setTestResult] = useState<{
-    taskId: string;
-    videoUrl: string | null;
-    seed: number;
-    firstFrameAssetId?: string;
-    firstFrameUrl?: string;
-  } | null>(null);
-  const [shotLock, setShotLock] = useState<ShotLockRecord | null>(null);
-  const [prodResult, setProdResult] = useState<string | null>(null);
+  const {
+    topic,
+    workspaceMode,
+    mode,
+    director,
+    activeShotIdx,
+    testResult,
+    shotLock,
+    prodResult,
+    error,
+    directorLoading,
+    veoLoading,
+    veoStatus,
+    veoProgressStep,
+    veoError,
+    veoSuccessMessage,
+    export: exportMeta,
+    historyEntryId,
+  } = state;
 
   const isPreview = workspaceMode === "preview";
   const activePrompt = director?.prompts[activeShotIdx];
-  const shotId = activePrompt ? `t2v-shot-${activePrompt.sceneNumber}` : "";
+  const shotId = activePrompt ? `t2v-shot-${activeShotIdx + 1}` : "";
+  const veoDurationSec = normalizeVeoDurationSec(state.shotDurationSec);
+  const previewUrl = prodResult ?? testResult?.videoUrl ?? null;
+
+  useEffect(() => {
+    if (director && (testResult || prodResult)) {
+      syncVideoHistoryFromWorkbench(state).then((id) => {
+        if (id && id !== state.historyEntryId) patch({ historyEntryId: id });
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [director, testResult, prodResult]);
 
   async function runDirector() {
-    setLoading(true);
-    setError(null);
+    patch({ directorLoading: true, error: null });
     try {
+      const consistencyNote = [
+        state.characterConsistency ? "保持人物一致性" : "",
+        state.sceneConsistency ? "保持场景一致性" : "",
+      ]
+        .filter(Boolean)
+        .join("，");
+
       const res = await fetch("/api/director", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, shotCount: 3 }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Director 失败");
-      setDirector({
-        title: data.title,
-        script: data.script,
-        prompts: (data.prompts as { sceneNumber: number; providerPrompt: string }[]).map(
-          (p, i) => ({
-            sceneNumber: p.sceneNumber,
-            providerPrompt: p.providerPrompt,
-            duration: data.storyboard?.[i]?.duration ?? 5,
-          })
-        ),
-      });
-      setActiveShotIdx(0);
-      setTestResult(null);
-      setShotLock(null);
-      setProdResult(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function runVeoTest() {
-    if (!activePrompt) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/veo/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          shotId,
-          workspaceMode,
-          mode: "test",
-          type: "t2v",
-          prompt: activePrompt.providerPrompt,
-          model: VEO_MODEL,
+          topic: consistencyNote ? `${topic}（${consistencyNote}）` : topic,
+          shotCount: state.shotCount,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Veo 测试失败");
-      setTestResult({
-        taskId: data.taskId,
-        videoUrl: data.videoUrl,
-        seed: data.seed,
-        firstFrameAssetId: data.firstFrameAssetId,
-        firstFrameUrl: data.firstFrameUrl,
+      if (!res.ok) throw new Error(data.error ?? "编导生成失败");
+
+      const storyboard = (data.storyboard ?? []) as StoryboardShot[];
+      const prompts: DirectorShot[] = (
+        data.prompts as { sceneNumber: number; providerPrompt: string }[]
+      ).map((p) => ({
+        sceneNumber: p.sceneNumber,
+        providerPrompt: p.providerPrompt,
+        duration: state.shotDurationSec,
+      }));
+
+      patch({
+        director: { title: data.title, script: data.script, storyboard, prompts },
+        activeShotIdx: 0,
+        testResult: null,
+        shotLock: null,
+        prodResult: null,
+        veoStatus: "idle",
+        veoError: null,
+        veoSuccessMessage: null,
+        voiceoverText: state.voiceoverText || data.script.slice(0, 500),
+        subtitleText: state.subtitleText || storyboard.map((s) => s.narration).filter(Boolean).join("\n"),
       });
-      setShotLock(null);
+
+      const historyId = await syncVideoHistoryFromWorkbench(
+        { ...state, director: { title: data.title, script: data.script, storyboard, prompts } },
+        { status: "running" }
+      );
+      patch({ historyEntryId: historyId });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      patch({ error: e instanceof Error ? e.message : String(e) });
     } finally {
-      setLoading(false);
+      patch({ directorLoading: false });
     }
+  }
+
+  function runVeoTest() {
+    if (!activePrompt || veoLoading) return;
+    patch({
+      veoLoading: true,
+      veoStatus: "generating",
+      veoProgressStep: 1,
+      veoStartedAt: new Date().toISOString(),
+      veoError: null,
+      veoSuccessMessage: null,
+      error: null,
+    });
+
+    runT2VVeoTask(async () => {
+      const step2Timer = setTimeout(() => patch({ veoProgressStep: 2 }), 1200);
+      try {
+        const res = await fetch("/api/veo/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shotId,
+            workspaceMode,
+            mode: "test",
+            type: "t2v",
+            prompt: activePrompt.providerPrompt,
+            model: VEO_MODEL,
+            durationSec: veoDurationSec,
+            aspectRatio: state.aspectRatio,
+            seed: resolveRequestSeed(state.seedMode, state.seed),
+          }),
+        });
+        patch({ veoProgressStep: 3 });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "视频预览失败");
+        patch({
+          testResult: {
+            taskId: data.taskId,
+            videoUrl: data.videoUrl,
+            seed: data.seed,
+            firstFrameAssetId: data.firstFrameAssetId,
+            firstFrameUrl: data.firstFrameUrl,
+          },
+          shotLock: null,
+          veoStatus: "success",
+          veoSuccessMessage: "视频生成完成",
+          veoError: null,
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        patch({ veoStatus: "failed", veoError: msg, error: msg });
+      } finally {
+        clearTimeout(step2Timer);
+        patch({ veoLoading: false });
+      }
+    });
   }
 
   async function lockShot() {
     if (!testResult || !activePrompt) return;
-    setLoading(true);
-    setError(null);
+    patch({ veoLoading: true, error: null });
     try {
       const input = {
         shotId,
@@ -125,28 +198,23 @@ export default function T2VWorkbench({ initialTopic = "" }: Props) {
         seed: testResult.seed,
         firstFrameAssetId: testResult.firstFrameAssetId ?? "preview",
         firstFrameUrl: testResult.firstFrameUrl ?? testResult.videoUrl ?? "",
-        duration: DEFAULT_PRODUCTION_DURATION_SEC,
-        aspectRatio: "9:16" as const,
+        duration: veoDurationSec,
+        aspectRatio: state.aspectRatio,
         model: VEO_MODEL,
         testTaskId: testResult.taskId,
         testClipUrl: testResult.videoUrl ?? "",
       };
-
       if (isPreview) {
-        setShotLock({
-          id: `preview-lock-${shotId}`,
-          shotId,
-          snapshot: {
-            ...input,
-            characterProfile: null,
-            cameraProfile: null,
-            lockedAt: new Date().toISOString(),
+        patch({
+          shotLock: {
+            id: `preview-lock-${shotId}`,
+            shotId,
+            snapshot: { ...input, characterProfile: null, cameraProfile: null, lockedAt: new Date().toISOString() },
           },
+          mode: "production",
         });
-        setMode("production");
         return;
       }
-
       const res = await fetch("/api/director/shot-lock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -154,19 +222,17 @@ export default function T2VWorkbench({ initialTopic = "" }: Props) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "锁定失败");
-      setShotLock(data);
-      setMode("production");
+      patch({ shotLock: data, mode: "production" });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      patch({ error: e instanceof Error ? e.message : String(e) });
     } finally {
-      setLoading(false);
+      patch({ veoLoading: false });
     }
   }
 
   async function runVeoProduction() {
     if (!shotLock || !activePrompt || isPreview) return;
-    setLoading(true);
-    setError(null);
+    patch({ veoLoading: true, veoStatus: "generating", veoProgressStep: 1, error: null });
     try {
       const res = await fetch("/api/veo/generate", {
         method: "POST",
@@ -184,171 +250,282 @@ export default function T2VWorkbench({ initialTopic = "" }: Props) {
           shotLockId: shotLock.id,
         }),
       });
+      patch({ veoProgressStep: 3 });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Veo 正式生成失败");
-      setProdResult(data.videoUrl);
+      if (!res.ok) throw new Error(data.error ?? "视频正式生成失败");
+      patch({
+        prodResult: data.videoUrl,
+        veoStatus: "success",
+        veoSuccessMessage: "视频正式生成完成",
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      patch({ veoStatus: "failed", veoError: msg, error: msg });
     } finally {
-      setLoading(false);
+      patch({ veoLoading: false });
     }
   }
 
   async function unlockShot() {
     if (!activePrompt) return;
     if (!isPreview) {
-      await fetch(`/api/director/shot-lock?shotId=${encodeURIComponent(shotId)}`, {
-        method: "DELETE",
-      });
+      await fetch(`/api/director/shot-lock?shotId=${encodeURIComponent(shotId)}`, { method: "DELETE" });
     }
-    setShotLock(null);
-    setMode("test");
-    setProdResult(null);
+    patch({ shotLock: null, mode: "test", prodResult: null });
   }
 
-  function onWorkspaceChange(next: WorkspaceMode) {
-    setWorkspaceMode(next);
-    setDirector(null);
-    setTestResult(null);
-    setShotLock(null);
-    setProdResult(null);
-    setMode("test");
-    setError(null);
+  function selectShot(i: number) {
+    patch({
+      activeShotIdx: i,
+      testResult: null,
+      shotLock: null,
+      prodResult: null,
+      mode: "test",
+      veoStatus: "idle",
+      veoError: null,
+      veoSuccessMessage: null,
+    });
   }
+
+  function reorderShots(from: number, to: number) {
+    if (!director) return;
+    const prompts = reorderArray(director.prompts, from, to);
+    const storyboard = reorderArray(director.storyboard, from, to);
+    patch({ director: { ...director, prompts, storyboard }, activeShotIdx: to });
+  }
+
+  function updatePrompt(index: number, providerPrompt: string) {
+    if (!director) return;
+    patch({
+      director: {
+        ...director,
+        prompts: director.prompts.map((p, i) => (i === index ? { ...p, providerPrompt } : p)),
+      },
+    });
+  }
+
+  async function syncExportHistory(meta: ReturnType<typeof getT2VState>["export"]) {
+    if (historyEntryId) {
+      patchVideoHistoryExport(historyEntryId, meta);
+    } else if (director) {
+      const id = await syncVideoHistoryFromWorkbench(getT2VState());
+      patch({ historyEntryId: id });
+    }
+  }
+
+  async function handleExportProject() {
+    if (!director) {
+      patch({
+        export: {
+          ...exportMeta,
+          exportStatus: "failed",
+          exportError: "请先完成编导生成",
+          lastExportType: "project",
+        },
+      });
+      return;
+    }
+    try {
+      const meta = await runWorkbenchExport({
+        exportType: "project",
+        fileName: `project_${(topic || "video").replace(/\s+/g, "_")}.zip`,
+        getExport: () => getT2VState().export,
+        patchExport: (m) => patch({ export: m }),
+        execute: async (onProgress) => {
+          const name = await exportT2VProject(getT2VState(), onProgress);
+          onProgress(100, "导出完成");
+          void name;
+        },
+      });
+      await syncExportHistory(meta);
+    } catch {
+      /* failed state patched */
+    }
+  }
+
+  async function handleExportVideo() {
+    if (!previewUrl) {
+      patch({
+        export: {
+          ...exportMeta,
+          exportStatus: "failed",
+          exportError: "没有可导出的视频",
+          lastExportType: "video",
+        },
+      });
+      return;
+    }
+    try {
+      const exportTopic = (director?.title ?? topic) || "video";
+      const fileName = `${exportTopic.replace(/\s+/g, "_")}_video.mp4`;
+      const meta = await runWorkbenchExport({
+        exportType: "video",
+        fileName,
+        getExport: () => getT2VState().export,
+        patchExport: (m) => patch({ export: m }),
+        execute: async (onProgress) => {
+          await exportT2VVideo(previewUrl, exportTopic, onProgress);
+        },
+      });
+      await syncExportHistory(meta);
+    } catch {
+      /* failed state patched */
+    }
+  }
+
+  function deleteExportRecord() {
+    const cleared = resetExportMeta();
+    patch({ export: cleared });
+    if (historyEntryId) patchVideoHistoryExport(historyEntryId, cleared);
+    setConfirmDeleteExport(false);
+  }
+
+  const pipelineSteps = [
+    { id: "topic", label: "主题", status: topic.trim() ? ("done" as const) : ("pending" as const) },
+    { id: "director", label: "编导", status: directorLoading ? ("active" as const) : director ? ("done" as const) : ("pending" as const) },
+    { id: "veo", label: "视频生成", status: veoStatus === "generating" ? ("active" as const) : veoStatus === "success" ? ("done" as const) : veoStatus === "failed" ? ("failed" as const) : ("pending" as const) },
+    {
+      id: "export",
+      label: "导出",
+      status:
+        exportMeta.exportStatus === "exporting"
+          ? ("active" as const)
+          : isExportSuccess(exportMeta)
+            ? ("done" as const)
+            : exportMeta.exportStatus === "failed"
+              ? ("failed" as const)
+              : ("pending" as const),
+    },
+  ];
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="shrink-0 border-b border-[var(--border)] px-6 py-4">
-        <h1 className="text-lg font-semibold">AI视频（T2V）</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          主题 → Director → Veo 测试 → Shot Lock → Veo 正式
+        <h1 className="workbench-page-title">视频创作</h1>
+        <p className="workbench-page-desc mt-1">
+          文生视频 · 主题 → 编导 → 剧本 → 分镜 → 视频生成 → 配音 → 字幕 → 设置 → 导出
         </p>
-        <div className="mt-3">
-          <WorkspaceModeToggle mode={workspaceMode} onChange={onWorkspaceChange} />
-        </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        <section className="glass-panel mb-4 rounded-xl p-4">
-          <label className="mb-2 block text-sm text-[var(--text-secondary)]">
-            主题
-          </label>
+        <TaskStatusBar steps={pipelineSteps} />
+
+        <WorkbenchSection title="主题">
           <input
-            className="input-field mb-3 w-full rounded-lg px-3 py-2 text-sm"
+            className="input-field w-full rounded-lg px-3 py-2.5 text-sm"
             value={topic}
-            onChange={(e) => setTopic(e.target.value)}
+            onChange={(e) => patch({ topic: e.target.value })}
             placeholder="输入视频主题"
           />
-          <button
-            type="button"
-            className="btn-primary rounded-lg px-4 py-2 text-sm"
-            disabled={loading || !topic.trim()}
-            onClick={runDirector}
-          >
-            运行 Director 流水线
-          </button>
-        </section>
+          <div className="mt-3">
+            <LoadingButton loading={directorLoading} loadingText="编导运行中…" disabled={!topic.trim() || directorLoading} onClick={runDirector}>
+              运行编导
+            </LoadingButton>
+          </div>
+        </WorkbenchSection>
 
         {director && (
           <>
-            <section className="glass-panel mb-4 rounded-xl p-4">
-              <h2 className="mb-2 text-sm font-medium">{director.title}</h2>
-              <p className="mb-3 line-clamp-4 text-xs text-[var(--text-muted)]">
-                {director.script}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {director.prompts.map((p, i) => (
-                  <button
-                    key={p.sceneNumber}
-                    type="button"
-                    onClick={() => {
-                      setActiveShotIdx(i);
-                      setTestResult(null);
-                      setShotLock(null);
-                      setProdResult(null);
-                      setMode("test");
-                    }}
-                    className={`rounded px-2 py-1 text-xs ${
-                      i === activeShotIdx ? "nav-item-active" : "bg-[var(--bg-inset)]"
-                    }`}
-                  >
-                    镜头 {p.sceneNumber}
-                  </button>
-                ))}
-              </div>
-            </section>
+            <WorkbenchSection title="剧本">
+              <h3 className="workbench-heading mb-2">{director.title}</h3>
+              <p className="workbench-body whitespace-pre-wrap leading-relaxed">{director.script}</p>
+            </WorkbenchSection>
 
-            <section className="glass-panel mb-4 rounded-xl p-4">
+            <WorkbenchSection title="分镜">
+              <StoryboardPanel
+                director={director}
+                activeShotIdx={activeShotIdx}
+                onSelectShot={selectShot}
+                onReorder={reorderShots}
+                onUpdatePrompt={updatePrompt}
+              />
+            </WorkbenchSection>
+
+            <WorkbenchSection title="视频预览 / 正式">
               {!isPreview && (
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-4">
                   <GenerationModeToggle
                     mode={mode}
-                    onChange={setMode}
+                    onChange={(m: GenerationMode) => patch({ mode: m })}
                     productionDisabled={!shotLock}
                   />
                 </div>
               )}
-              <p className="mb-3 line-clamp-4 text-xs text-[var(--text-muted)]">
-                {activePrompt?.providerPrompt}
-              </p>
               {mode === "test" || isPreview ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="btn-primary rounded-lg px-4 py-2 text-sm"
-                    disabled={loading}
-                    onClick={runVeoTest}
-                  >
-                    Veo 3s {isPreview ? "预览" : "测试"}
-                  </button>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <LoadingButton loading={veoLoading} loadingText="生成中…" disabled={veoLoading} onClick={runVeoTest}>
+                    {veoDurationSec} 秒预览
+                  </LoadingButton>
                   {!isPreview && (
-                    <button
-                      type="button"
-                      className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
-                      disabled={loading || !testResult}
-                      onClick={lockShot}
-                    >
+                    <LoadingButton variant="secondary" disabled={veoLoading || !testResult} onClick={lockShot}>
                       确认并锁定
-                    </button>
+                    </LoadingButton>
                   )}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  className="btn-primary rounded-lg px-4 py-2 text-sm"
-                  disabled={loading || !shotLock}
-                  onClick={runVeoProduction}
-                >
-                  Veo 正式生成（{DEFAULT_PRODUCTION_DURATION_SEC}s）
-                </button>
-              )}
-              {testResult?.videoUrl && (
-                <div className="mt-3">
-                  <video
-                    src={testResult.videoUrl}
-                    controls
-                    className="max-h-48 rounded-lg"
-                  />
+                <div className="mb-4">
+                  <LoadingButton loading={veoLoading} loadingText="正式生成中…" disabled={veoLoading || !shotLock} onClick={runVeoProduction}>
+                    正式生成（{veoDurationSec} 秒）
+                  </LoadingButton>
                 </div>
               )}
-              {prodResult && (
-                <p className="mt-2 text-xs">
-                  正式视频:{" "}
-                  <a href={prodResult} className="underline" target="_blank">
-                    {prodResult}
-                  </a>
-                </p>
-              )}
-            </section>
-
-            {!isPreview && (
-              <ShotLockPanel lock={shotLock} onUnlock={unlockShot} />
-            )}
+              <VeoProgressPanel status={veoStatus} step={veoProgressStep} error={veoError} successMessage={veoSuccessMessage} />
+              <VideoPreviewPanel status={veoStatus} videoUrl={previewUrl} error={veoError} />
+              {!isPreview && <ShotLockPanel lock={shotLock} onUnlock={unlockShot} />}
+            </WorkbenchSection>
           </>
         )}
 
-        {error && (
-          <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>
+        <WorkbenchSection title="配音">
+          <textarea
+            className="input-field min-h-[80px] w-full rounded-lg px-3 py-2.5 text-sm"
+            value={state.voiceoverText}
+            onChange={(e) => patch({ voiceoverText: e.target.value })}
+            placeholder="配音文案"
+          />
+        </WorkbenchSection>
+
+        <WorkbenchSection title="字幕">
+          <textarea
+            className="input-field min-h-[80px] w-full rounded-lg px-3 py-2.5 text-sm"
+            value={state.subtitleText}
+            onChange={(e) => patch({ subtitleText: e.target.value })}
+            placeholder="字幕内容"
+          />
+        </WorkbenchSection>
+
+        <WorkbenchSection title="视频设置">
+          <VideoSettingsPanel state={state} patch={patch} disabled={directorLoading || veoLoading} />
+        </WorkbenchSection>
+
+        <ExportPanel
+          workbench="t2v"
+          exportMeta={exportMeta}
+          canExportProject={!!director}
+          canExportMedia={!!previewUrl}
+          onExportProject={handleExportProject}
+          onExportMedia={handleExportVideo}
+          onDeleteRecord={() => setConfirmDeleteExport(true)}
+        />
+
+        {confirmDeleteExport && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="rounded-xl bg-[var(--bg-surface)] p-6 shadow-xl">
+              <p className="text-sm font-medium text-[var(--text-primary)]">
+                {isExportSuccess(exportMeta)
+                  ? "此项目已导出过。确认删除本地记录？"
+                  : "确认删除导出记录？"}
+              </p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button type="button" className="btn-secondary rounded-lg px-3 py-1.5 text-sm" onClick={() => setConfirmDeleteExport(false)}>取消</button>
+                <button type="button" className="rounded-lg bg-[var(--danger)] px-3 py-1.5 text-sm text-white" onClick={deleteExportRecord}>确认删除</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {error && veoStatus !== "failed" && (
+          <p className="mt-4 text-sm font-semibold text-[var(--danger)]">{error}</p>
         )}
       </div>
     </div>

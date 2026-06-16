@@ -22,12 +22,12 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as Body;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "请求格式无效" }, { status: 400 });
   }
 
   const topic = body.topic?.trim();
   if (!topic) {
-    return NextResponse.json({ error: "topic is required" }, { status: 400 });
+    return NextResponse.json({ error: "请填写主题" }, { status: 400 });
   }
 
   const shotCount =

@@ -109,10 +109,10 @@ export async function generateWithVeo(
       throw new ShotLockValidationError("预览模式不支持正式生成");
     }
     if (!request.shotLockId) {
-      throw new ShotLockValidationError("正式模式需要 shotLockId");
+      throw new ShotLockValidationError("正式模式需要镜头锁定 ID");
     }
     const lock = getShotLockById(request.shotLockId);
-    if (!lock) throw new ShotLockValidationError("Shot Lock 不存在");
+    if (!lock) throw new ShotLockValidationError("镜头锁定不存在");
     validateProductionRequest(request, lock);
     seed = lock.snapshot.seed;
     prompt = lock.snapshot.prompt;
@@ -128,14 +128,14 @@ export async function generateWithVeo(
   if (type === "i2v") {
     if (preview) {
       if (!request.imageBase64?.trim()) {
-        throw new Error("预览模式 i2v 需要 imageBase64");
+        throw new Error("预览模式图生视频需要参考图片");
       }
       prompt = `${prompt}\n[Reference image attached]`;
     } else if (request.imageAssetId) {
       readImageBuffer(request.imageAssetId);
       prompt = `${prompt}\n[Reference image asset: ${request.imageAssetId}]`;
     } else if (mode === "test") {
-      throw new Error("i2v 测试模式需要 imageAssetId");
+      throw new Error("图生视频测试模式需要参考图资源");
     }
   }
 

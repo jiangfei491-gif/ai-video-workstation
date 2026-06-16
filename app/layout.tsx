@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { themeInitScript } from "@/app/lib/theme/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Video Workstation",
-  description: "AI动态图片 · AI视频 · 热点中心",
+  title: "AI 工作台",
+  description: "视频创作 · 动态图片 · 历史记录 · 热点中心",
 };
 
 export default function RootLayout({
@@ -25,10 +26,12 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      data-theme="dark"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );

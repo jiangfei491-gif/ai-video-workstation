@@ -19,20 +19,20 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as VeoGenerateRequest;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "请求格式无效" }, { status: 400 });
   }
 
   body.workspaceMode = parseWorkspaceMode(body.workspaceMode);
 
   if (!body.shotId?.trim() || !body.prompt?.trim()) {
     return NextResponse.json(
-      { error: "shotId and prompt are required" },
+      { error: "缺少镜头 ID 或提示词" },
       { status: 400 }
     );
   }
   if (!body.mode || !body.type) {
     return NextResponse.json(
-      { error: "mode and type are required" },
+      { error: "缺少模式或类型参数" },
       { status: 400 }
     );
   }
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Veo 生成失败" },
+      { error: err instanceof Error ? err.message : "视频生成失败" },
       { status: 502 }
     );
   }

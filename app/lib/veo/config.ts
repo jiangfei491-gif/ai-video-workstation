@@ -76,9 +76,9 @@ export function assertVeoConfigured(config: VeoConfig = getVeoConfig()): void {
   if (!isVeoConfigured(config)) {
     if (config.apiMode === "vertex") {
       throw new Error(
-        "未配置 Veo Vertex AI：需要 VEO_PROJECT_ID 与 VEO_ACCESS_TOKEN（或 VEO_API_KEY 作为 Bearer Token）"
+        "未配置视频生成（Vertex 模式）：需要 VEO_PROJECT_ID 与 VEO_ACCESS_TOKEN（或 VEO_API_KEY 作为访问令牌）"
       );
     }
-    throw new Error("未配置 VEO_API_KEY，请在 .env.local 中设置 Gemini API Key");
+    throw new Error("未配置 VEO_API_KEY，请在 .env.local 中设置 Gemini 接口密钥");
   }
 }

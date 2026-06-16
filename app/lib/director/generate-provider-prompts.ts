@@ -18,7 +18,7 @@ function normalizePrompt(
 ): DirectorProviderPrompt {
   const sceneNumber = Number(raw.sceneNumber) || shot.sceneNumber;
   const providerPrompt =
-    String(raw.providerPrompt ?? "").trim() || buildFallbackPrompt(shot);
+    (String(raw.providerPrompt ?? "").trim()) || buildFallbackPrompt(shot);
 
   return { sceneNumber, providerPrompt };
 }
@@ -55,7 +55,7 @@ export async function generateProviderPrompts(
 
   const parsed = JSON.parse(text) as { prompts?: Record<string, unknown>[] };
   const rawPrompts = parsed.prompts ?? [];
-  if (rawPrompts.length === 0) throw new Error("未能生成视频 Prompt");
+  if (rawPrompts.length === 0) throw new Error("未能生成视频提示词");
 
   const byScene = new Map<number, DirectorProviderPrompt>();
   for (const raw of rawPrompts) {

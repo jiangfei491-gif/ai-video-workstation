@@ -17,10 +17,10 @@ function normalizeShot(raw: Record<string, unknown>, index: number): DirectorSto
   return {
     sceneNumber,
     duration,
-    character: String(raw.character ?? "").trim() || "未指定角色",
-    action: String(raw.action ?? "").trim() || "未指定动作",
-    environment: String(raw.environment ?? "").trim() || "未指定环境",
-    camera: String(raw.camera ?? "").trim() || "中景固定镜头",
+    character: (String(raw.character ?? "").trim()) || "未指定角色",
+    action: (String(raw.action ?? "").trim()) || "未指定动作",
+    environment: (String(raw.environment ?? "").trim()) || "未指定环境",
+    camera: (String(raw.camera ?? "").trim()) || "中景固定镜头",
     transition: normalizeTransition(raw.transition),
     narration: String(raw.narration ?? "").trim(),
   };

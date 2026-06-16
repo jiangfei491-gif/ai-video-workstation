@@ -24,7 +24,7 @@ export async function GET(
   const rel = segments.join("/");
   const filepath = resolveDesktopFile(rel);
   if (!filepath) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ error: "文件未找到" }, { status: 404 });
   }
 
   const ext = path.extname(filepath).toLowerCase();

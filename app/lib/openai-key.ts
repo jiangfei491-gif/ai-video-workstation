@@ -21,7 +21,7 @@ export function isModelNotFoundError(err: unknown): boolean {
 
 export function formatOpenAIError(err: unknown): string {
   if (err instanceof OpenAI.APIError) {
-    return `OpenAI API [${err.status}] ${err.code ?? "error"}: ${err.message}`;
+    return `OpenAI 接口 [${err.status}] ${err.code ?? "错误"}: ${err.message}`;
   }
   if (err instanceof Error) return err.message;
   return String(err);

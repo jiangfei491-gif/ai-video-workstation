@@ -2,7 +2,7 @@
 export function formatError(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
-  if (err == null) return "Unknown error";
+  if (err == null) return "未知错误";
 
   if (typeof err === "object") {
     const o = err as Record<string, unknown>;

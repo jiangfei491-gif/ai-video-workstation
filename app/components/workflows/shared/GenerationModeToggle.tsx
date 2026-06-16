@@ -24,7 +24,7 @@ export default function GenerationModeToggle({
             : "text-[var(--text-muted)] hover:bg-[var(--bg-inset)]"
         }`}
       >
-        测试模式（3s）
+        测试模式（3 秒）
       </button>
       <button
         type="button"
@@ -35,9 +35,9 @@ export default function GenerationModeToggle({
             ? "nav-item-active font-medium"
             : "text-[var(--text-muted)] hover:bg-[var(--bg-inset)]"
         } ${productionDisabled ? "cursor-not-allowed opacity-40" : ""}`}
-        title={productionDisabled ? "请先锁定 Shot Lock" : undefined}
+        title={productionDisabled ? "请先锁定镜头" : undefined}
       >
-        正式模式（8–12s）
+        正式模式（8–12 秒）
       </button>
     </div>
   );

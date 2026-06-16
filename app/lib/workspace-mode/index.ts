@@ -9,5 +9,5 @@ export function parseWorkspaceMode(raw: unknown): WorkspaceMode {
 
 export const WORKSPACE_MODE_LABELS: Record<WorkspaceMode, string> = {
   preview: "测试模式（仅预览，不保存）",
-  production: "正式模式（保存到桌面 AI-Veo）",
+  production: "正式模式（保存到桌面视频文件夹）",
 };

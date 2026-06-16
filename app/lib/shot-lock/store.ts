@@ -97,22 +97,22 @@ export function validateProductionRequest(
 ): void {
   const s = lock.snapshot;
   if (request.prompt.trim() !== s.prompt.trim()) {
-    throw new ShotLockValidationError("Prompt 与 Shot Lock 不一致");
+    throw new ShotLockValidationError("提示词与镜头锁定不一致");
   }
   if (request.seed !== undefined && request.seed !== s.seed) {
-    throw new ShotLockValidationError("Seed 与 Shot Lock 不一致");
+    throw new ShotLockValidationError("随机种子与镜头锁定不一致");
   }
   if (request.model && request.model !== s.model) {
-    throw new ShotLockValidationError("Model 与 Shot Lock 不一致");
+    throw new ShotLockValidationError("模型与镜头锁定不一致");
   }
   if (request.aspectRatio && request.aspectRatio !== s.aspectRatio) {
-    throw new ShotLockValidationError("AspectRatio 与 Shot Lock 不一致");
+    throw new ShotLockValidationError("画面比例与镜头锁定不一致");
   }
   if (request.type === "i2v" && request.imageAssetId !== s.imageAssetId) {
-    throw new ShotLockValidationError("ImageAssetId 与 Shot Lock 不一致");
+    throw new ShotLockValidationError("参考图与镜头锁定不一致");
   }
   const duration = request.durationSec ?? s.duration;
   if (duration !== s.duration) {
-    throw new ShotLockValidationError("Duration 与 Shot Lock 不一致");
+    throw new ShotLockValidationError("时长与镜头锁定不一致");
   }
 }
