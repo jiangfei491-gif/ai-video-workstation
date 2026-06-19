@@ -38,6 +38,8 @@ const defaultState: T2VWorkbenchState = {
   testResult: null,
   shotLock: null,
   prodResult: null,
+  batchRunning: false,
+  batchResults: {},
   export: createDefaultExportMeta(),
   historyEntryId: null,
   error: null,
@@ -68,6 +70,21 @@ function restoreMediaUrls(): void {
   if (state.prodResult?.startsWith("blob-cache:")) {
     const cached = restoreVideoUrl(state.prodResult.replace("blob-cache:", ""));
     if (cached) state = { ...state, prodResult: cached };
+  }
+  // 批量结果里被剥离的 data: 视频，按 taskId 从 sessionStorage 还原
+  if (state.batchResults && Object.keys(state.batchResults).length > 0) {
+    const restored = { ...state.batchResults };
+    let changed = false;
+    for (const [idx, shot] of Object.entries(restored)) {
+      if (shot.status === "success" && !shot.videoUrl && shot.taskId) {
+        const cached = restoreVideoUrl(shot.taskId);
+        if (cached) {
+          restored[Number(idx)] = { ...shot, videoUrl: cached };
+          changed = true;
+        }
+      }
+    }
+    if (changed) state = { ...state, batchResults: restored };
   }
 }
 
@@ -110,6 +127,13 @@ export function setT2VState(patch: Partial<T2VWorkbenchState>): void {
   if (patch.prodResult && patch.prodResult.startsWith("data:")) {
     cacheVideoUrl(`prod-${state.historyEntryId ?? "current"}`, patch.prodResult);
   }
+  if (patch.batchResults) {
+    for (const shot of Object.values(patch.batchResults)) {
+      if (shot.videoUrl?.startsWith("data:") && shot.taskId) {
+        cacheVideoUrl(shot.taskId, shot.videoUrl);
+      }
+    }
+  }
   emit();
 }
 
@@ -127,6 +151,19 @@ export function runT2VVeoTask(task: () => Promise<void>): void {
   if (inflightVeo) return;
   inflightVeo = task().finally(() => {
     inflightVeo = null;
+  });
+}
+
+let inflightBatch: Promise<void> | null = null;
+
+export function isT2VBatchInflight(): boolean {
+  return inflightBatch !== null;
+}
+
+export function runT2VBatchTask(task: () => Promise<void>): void {
+  if (inflightBatch) return;
+  inflightBatch = task().finally(() => {
+    inflightBatch = null;
   });
 }
 

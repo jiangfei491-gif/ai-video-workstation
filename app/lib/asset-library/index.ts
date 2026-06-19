@@ -1,4 +1,9 @@
-export type { ImageAsset, FirstFrameAsset, VideoClipAsset } from "./types";
+export type {
+  ImageAsset,
+  FirstFrameAsset,
+  VideoClipAsset,
+  CharacterAsset,
+} from "./types";
 export {
   listImageAssets,
   getImageAsset,
@@ -7,3 +12,11 @@ export {
   saveVideoClipAsset,
   readImageBuffer,
 } from "./store";
+export {
+  listCharacters,
+  getCharacter,
+  createCharacter,
+  deleteCharacter,
+} from "./character-store";
+export { expandCharacterRefs, expandCharacterRefsFromStore } from "./expand-refs";
+export { extractCharacterAppearance } from "./extract-appearance";

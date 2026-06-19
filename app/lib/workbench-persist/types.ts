@@ -15,6 +15,15 @@ export type VeoTestResult = {
   firstFrameUrl?: string;
 };
 
+/** 批量并行生成时，单个镜头的状态 */
+export type BatchShotState = {
+  status: "pending" | "generating" | "success" | "failed";
+  videoUrl: string | null;
+  taskId?: string;
+  seed?: number;
+  error?: string;
+};
+
 export type StoryboardShot = {
   sceneNumber: number;
   duration: number;
@@ -61,6 +70,10 @@ export type T2VWorkbenchState = {
   testResult: VeoTestResult | null;
   shotLock: ShotLockRecord | null;
   prodResult: string | null;
+  /** 批量并行生成：是否进行中 */
+  batchRunning: boolean;
+  /** 批量并行生成：按镜头索引存放各镜头结果 */
+  batchResults: Record<number, BatchShotState>;
   export: ExportMeta;
   historyEntryId: string | null;
   error: string | null;

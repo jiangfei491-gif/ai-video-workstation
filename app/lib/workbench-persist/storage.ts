@@ -54,6 +54,26 @@ function stripLargeDataUrls(value: unknown): unknown {
       /* ignore */
     }
   }
+  // 批量生成结果：把 data: 视频转存到 sessionStorage，避免撑爆 localStorage
+  const batchResults = clone.batchResults as
+    | Record<string, Record<string, unknown>>
+    | null
+    | undefined;
+  if (batchResults && typeof batchResults === "object") {
+    for (const shot of Object.values(batchResults)) {
+      if (shot?.videoUrl && String(shot.videoUrl).startsWith("data:")) {
+        const taskId = String(shot.taskId ?? "");
+        if (taskId) {
+          try {
+            sessionStorage.setItem(`${VIDEO_CACHE_PREFIX}${taskId}`, String(shot.videoUrl));
+          } catch {
+            /* ignore */
+          }
+        }
+        shot.videoUrl = null;
+      }
+    }
+  }
   return clone;
 }
 

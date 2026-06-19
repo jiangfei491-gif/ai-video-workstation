@@ -28,8 +28,13 @@ export async function GET(
   }
 
   const ext = path.extname(filepath).toLowerCase();
-  const body = fs.readFileSync(filepath);
-  return new NextResponse(body, {
+  let body: Buffer;
+  try {
+    body = await fs.promises.readFile(filepath);
+  } catch {
+    return NextResponse.json({ error: "文件未找到" }, { status: 404 });
+  }
+  return new NextResponse(new Uint8Array(body), {
     headers: {
       "Content-Type": MIME[ext] ?? "application/octet-stream",
       "Content-Disposition": `inline; filename="${path.basename(filepath)}"`,

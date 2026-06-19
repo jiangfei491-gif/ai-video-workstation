@@ -15,6 +15,7 @@ import {
   validateProductionRequest,
 } from "@/app/lib/shot-lock";
 import {
+  expandCharacterRefsFromStore,
   readImageBuffer,
   saveFirstFrameAsset,
   saveVideoClipAsset,
@@ -138,6 +139,10 @@ export async function generateWithVeo(
       throw new Error("图生视频测试模式需要参考图资源");
     }
   }
+
+  // 生成前最后一刻：展开 @角色名 → 外观描述，做跨镜头一致性锚定
+  // （用户编辑器里始终保留干净的 @名字）
+  prompt = expandCharacterRefsFromStore(prompt);
 
   try {
     const { taskId, buffer } = await generateVeoVideoFromPrompt(

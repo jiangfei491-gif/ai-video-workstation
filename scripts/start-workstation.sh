@@ -2,7 +2,7 @@
 # V3 本地工作台启动 — 先停旧实例，再检测实际端口并打开浏览器
 set -euo pipefail
 
-PROJECT="/Users/mac/ai-workspace"
+PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_FILE="${TMPDIR:-/tmp}/ai-workspace-dev.log"
 
 cd "$PROJECT" || exit 1

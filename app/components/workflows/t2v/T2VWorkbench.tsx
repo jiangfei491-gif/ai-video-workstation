@@ -9,6 +9,8 @@ import TaskStatusBar from "@/app/components/workflows/shared/TaskStatusBar";
 import VeoProgressPanel from "@/app/components/workflows/shared/VeoProgressPanel";
 import VideoPreviewPanel from "@/app/components/workflows/shared/VideoPreviewPanel";
 import WorkbenchSection from "@/app/components/workflows/shared/WorkbenchSection";
+import BatchGeneratePanel from "@/app/components/workflows/t2v/BatchGeneratePanel";
+import CharacterLibraryPanel from "@/app/components/workflows/t2v/CharacterLibraryPanel";
 import StoryboardPanel from "@/app/components/workflows/t2v/StoryboardPanel";
 import VideoSettingsPanel from "@/app/components/workflows/t2v/VideoSettingsPanel";
 import { resolveRequestSeed } from "@/app/lib/generation-params";
@@ -21,13 +23,19 @@ import { syncVideoHistoryFromWorkbench } from "@/app/lib/history/sync-video";
 import { normalizeVeoDurationSec } from "@/app/lib/shot-control/types";
 import {
   getT2VState,
+  runT2VBatchTask,
   runT2VVeoTask,
+  setT2VState,
   useT2VWorkbenchStore,
 } from "@/app/lib/workbench-persist/t2v-store";
 import type {
+  BatchShotState,
   DirectorShot,
   StoryboardShot,
 } from "@/app/lib/workbench-persist/types";
+
+/** 批量并行时的并发上限，避免一次性打满 API 触发限流 */
+const BATCH_CONCURRENCY = 3;
 
 const VEO_MODEL = "veo-3.1-generate-preview";
 
@@ -51,6 +59,8 @@ export default function T2VWorkbench() {
     testResult,
     shotLock,
     prodResult,
+    batchRunning,
+    batchResults,
     error,
     directorLoading,
     veoLoading,
@@ -113,6 +123,8 @@ export default function T2VWorkbench() {
         testResult: null,
         shotLock: null,
         prodResult: null,
+        batchRunning: false,
+        batchResults: {},
         veoStatus: "idle",
         veoError: null,
         veoSuccessMessage: null,
@@ -287,6 +299,85 @@ export default function T2VWorkbench() {
     });
   }
 
+  function patchBatchShot(index: number, shot: BatchShotState) {
+    setT2VState({
+      batchResults: { ...getT2VState().batchResults, [index]: shot },
+    });
+  }
+
+  /** 生成单个镜头（test 预览），更新 batchResults[index] */
+  async function generateOneShot(index: number, prompt: string) {
+    patchBatchShot(index, { status: "generating", videoUrl: null });
+    try {
+      const res = await fetch("/api/veo/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shotId: `t2v-shot-${index + 1}`,
+          workspaceMode,
+          mode: "test",
+          type: "t2v",
+          prompt,
+          model: VEO_MODEL,
+          durationSec: veoDurationSec,
+          aspectRatio: state.aspectRatio,
+          seed: resolveRequestSeed(state.seedMode, state.seed),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "生成失败");
+      patchBatchShot(index, {
+        status: "success",
+        videoUrl: data.videoUrl,
+        taskId: data.taskId,
+        seed: data.seed,
+      });
+    } catch (e) {
+      patchBatchShot(index, {
+        status: "failed",
+        videoUrl: null,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  function runBatch() {
+    if (!director || batchRunning) return;
+    const prompts = director.prompts;
+    const init: Record<number, BatchShotState> = {};
+    prompts.forEach((_, i) => {
+      init[i] = { status: "pending", videoUrl: null };
+    });
+    patch({ batchRunning: true, batchResults: init, error: null });
+
+    runT2VBatchTask(async () => {
+      let cursor = 0;
+      const worker = async () => {
+        while (cursor < prompts.length) {
+          const i = cursor++;
+          await generateOneShot(i, prompts[i].providerPrompt);
+        }
+      };
+      const workers = Array.from(
+        { length: Math.min(BATCH_CONCURRENCY, prompts.length) },
+        worker
+      );
+      await Promise.all(workers);
+      patch({ batchRunning: false });
+    });
+  }
+
+  function retryShot(index: number) {
+    if (!director || batchRunning) return;
+    const prompt = director.prompts[index]?.providerPrompt;
+    if (!prompt) return;
+    runT2VBatchTask(async () => {
+      patch({ batchRunning: true });
+      await generateOneShot(index, prompt);
+      patch({ batchRunning: false });
+    });
+  }
+
   function reorderShots(from: number, to: number) {
     if (!director) return;
     const prompts = reorderArray(director.prompts, from, to);
@@ -431,6 +522,10 @@ export default function T2VWorkbench() {
               <p className="workbench-body whitespace-pre-wrap leading-relaxed">{director.script}</p>
             </WorkbenchSection>
 
+            <WorkbenchSection title="角色库">
+              <CharacterLibraryPanel />
+            </WorkbenchSection>
+
             <WorkbenchSection title="分镜">
               <StoryboardPanel
                 director={director}
@@ -438,6 +533,17 @@ export default function T2VWorkbench() {
                 onSelectShot={selectShot}
                 onReorder={reorderShots}
                 onUpdatePrompt={updatePrompt}
+              />
+            </WorkbenchSection>
+
+            <WorkbenchSection title="批量生成">
+              <BatchGeneratePanel
+                director={director}
+                batchRunning={batchRunning}
+                batchResults={batchResults}
+                onRunBatch={runBatch}
+                onRetryShot={retryShot}
+                onSelectShot={selectShot}
               />
             </WorkbenchSection>
 

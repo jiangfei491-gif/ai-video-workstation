@@ -2,7 +2,7 @@
 # V3 本地工作台停止
 set -euo pipefail
 
-PROJECT="/Users/mac/ai-workspace"
+PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$PROJECT" 2>/dev/null || true
 
