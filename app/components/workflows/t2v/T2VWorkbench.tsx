@@ -515,15 +515,15 @@ export default function T2VWorkbench() {
           </div>
         </WorkbenchSection>
 
+        <WorkbenchSection title="角色库">
+          <CharacterLibraryPanel />
+        </WorkbenchSection>
+
         {director && (
           <>
             <WorkbenchSection title="剧本">
               <h3 className="workbench-heading mb-2">{director.title}</h3>
               <p className="workbench-body whitespace-pre-wrap leading-relaxed">{director.script}</p>
-            </WorkbenchSection>
-
-            <WorkbenchSection title="角色库">
-              <CharacterLibraryPanel />
             </WorkbenchSection>
 
             <WorkbenchSection title="分镜">

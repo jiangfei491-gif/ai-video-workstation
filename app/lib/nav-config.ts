@@ -1,4 +1,9 @@
-export type AppNavId = "ai-video" | "dynamic-image" | "history" | "trends";
+export type AppNavId =
+  | "ai-video"
+  | "characters"
+  | "dynamic-image"
+  | "history"
+  | "trends";
 
 export const APP_NAV_ITEMS: {
   id: AppNavId;
@@ -6,6 +11,7 @@ export const APP_NAV_ITEMS: {
   href: string;
 }[] = [
   { id: "ai-video", label: "视频创作", href: "/ai-video" },
+  { id: "characters", label: "角色库", href: "/characters" },
   { id: "dynamic-image", label: "动态图片", href: "/dynamic-image" },
   { id: "history", label: "历史记录", href: "/history" },
   { id: "trends", label: "热点中心", href: "/trends" },

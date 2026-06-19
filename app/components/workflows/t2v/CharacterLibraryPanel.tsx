@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FiPlus, FiTrash2, FiUser, FiLoader, FiImage } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiUser, FiLoader, FiImage, FiRefreshCw, FiX } from "react-icons/fi";
 import { fileToScaledDataUrl } from "@/app/lib/image-client";
 
 type Character = {
@@ -18,6 +18,10 @@ export default function CharacterLibraryPanel() {
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // 正在生成角色图的角色 id
+  const [portraitId, setPortraitId] = useState<string | null>(null);
+  // 点击放大查看的角色（看细节）
+  const [preview, setPreview] = useState<Character | null>(null);
 
   // 新增表单
   const [name, setName] = useState("");
@@ -105,6 +109,26 @@ export default function CharacterLibraryPanel() {
     }
   }
 
+  // 根据外观描述生成角色图（走 OpenAI gpt-image，与 Veo 额度无关）
+  async function generatePortrait(id: string) {
+    setPortraitId(id);
+    setErr(null);
+    try {
+      const res = await fetch("/api/characters/portrait", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "角色图生成失败");
+      setChars((prev) => prev.map((c) => (c.id === id ? data.character : c)));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPortraitId(null);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <p className="text-xs text-[var(--text-caption)]">
@@ -124,18 +148,27 @@ export default function CharacterLibraryPanel() {
               key={c.id}
               className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]/40 p-3"
             >
-              {c.refImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={c.refImageUrl}
-                  alt={c.name}
-                  className="h-14 w-14 shrink-0 rounded-lg object-cover"
-                />
-              ) : (
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-surface)] text-[var(--text-secondary)]">
-                  <FiUser className="h-6 w-6" />
-                </span>
-              )}
+              <div className="relative h-16 w-16 shrink-0">
+                {c.refImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.refImageUrl}
+                    alt={c.name}
+                    onClick={() => setPreview(c)}
+                    className="h-16 w-16 cursor-zoom-in rounded-lg object-cover transition-opacity hover:opacity-80"
+                    title="点击查看大图"
+                  />
+                ) : (
+                  <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-[var(--bg-surface)] text-[var(--text-secondary)]">
+                    <FiUser className="h-6 w-6" />
+                  </span>
+                )}
+                {portraitId === c.id && (
+                  <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-white">
+                    <FiLoader className="h-5 w-5 animate-spin" />
+                  </span>
+                )}
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-sm font-semibold text-[var(--accent)]">
@@ -153,6 +186,15 @@ export default function CharacterLibraryPanel() {
                 <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--text-secondary)]">
                   {c.appearance}
                 </p>
+                <button
+                  type="button"
+                  disabled={portraitId === c.id}
+                  onClick={() => generatePortrait(c.id)}
+                  className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[var(--accent)] hover:underline disabled:opacity-50"
+                >
+                  <FiRefreshCw className={`h-3 w-3 ${portraitId === c.id ? "animate-spin" : ""}`} />
+                  {portraitId === c.id ? "生成中…" : c.refImageUrl ? "重新生成角色图" : "生成角色图"}
+                </button>
               </div>
             </div>
           ))}
@@ -248,6 +290,42 @@ export default function CharacterLibraryPanel() {
           <FiPlus className="h-4 w-4" />
           添加角色
         </button>
+      )}
+
+      {/* 大图浮层：点击放大看角色细节 */}
+      {preview?.refImageUrl && (
+        <div
+          onClick={() => setPreview(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-full max-w-lg flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5">
+              <span className="font-mono text-sm font-semibold text-[var(--accent)]">
+                @{preview.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                className="text-[var(--text-caption)] hover:text-[var(--text-primary)]"
+                title="关闭"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={preview.refImageUrl}
+              alt={preview.name}
+              className="min-h-0 w-full flex-1 object-contain"
+            />
+            <p className="border-t border-[var(--border)] px-4 py-2.5 text-xs leading-relaxed text-[var(--text-secondary)]">
+              {preview.appearance}
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -40,6 +40,8 @@ export default function BatchGeneratePanel({
   const active = entries.filter((s) => s.status === "generating").length;
   const hasResults = entries.length > 0;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  // 失败时取第一条错误信息展示，方便定位（如 Veo 额度耗尽）
+  const firstError = entries.find((s) => s.status === "failed")?.error;
 
   return (
     <div className="rounded-lg border border-[var(--border)] p-4">
@@ -76,6 +78,14 @@ export default function BatchGeneratePanel({
             className="h-full rounded-full bg-[var(--accent)] transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
+        </div>
+      )}
+
+      {/* 失败原因（如 Veo 额度耗尽 / 限流），方便一眼定位 */}
+      {!batchRunning && firstError && (
+        <div className="mt-3 rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-3 py-2">
+          <p className="text-xs font-medium text-[var(--danger)]">失败原因</p>
+          <p className="mt-0.5 break-words text-xs text-[var(--text-secondary)]">{firstError}</p>
         </div>
       )}
 

@@ -16,6 +16,7 @@ export {
   listCharacters,
   getCharacter,
   createCharacter,
+  updateCharacterImage,
   deleteCharacter,
 } from "./character-store";
 export { expandCharacterRefs, expandCharacterRefsFromStore } from "./expand-refs";

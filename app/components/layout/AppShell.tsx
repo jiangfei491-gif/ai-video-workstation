@@ -8,6 +8,7 @@ import {
   FiMoon,
   FiSun,
   FiTrendingUp,
+  FiUsers,
   FiVideo,
 } from "react-icons/fi";
 import {
@@ -20,6 +21,7 @@ import { patchUiState } from "@/app/lib/ui-state/store";
 
 const NAV_ICONS: Record<AppNavId, React.ComponentType<{ className?: string }>> = {
   "ai-video": FiVideo,
+  characters: FiUsers,
   "dynamic-image": FiFilm,
   history: FiClock,
   trends: FiTrendingUp,

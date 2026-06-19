@@ -21,7 +21,9 @@ export default function StoryboardPanel({
   onUpdatePrompt,
 }: Props) {
   const { storyboard, prompts } = director;
-  const [mode, setMode] = useState<"builder" | "raw">("builder");
+  // 默认「直接编辑」——编导已生成好提示词，先让用户看到/改它；
+  // 「填空助手」是从零搭新提示词的可选增强（无法反向拆解已生成的英文 prompt）。
+  const [mode, setMode] = useState<"builder" | "raw">("raw");
 
   function moveShot(index: number, direction: -1 | 1) {
     const next = index + direction;
