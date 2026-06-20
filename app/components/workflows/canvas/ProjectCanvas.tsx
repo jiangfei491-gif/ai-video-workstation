@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   FiUser,
   FiZoomIn,
@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi";
 import { useT2VWorkbenchStore } from "@/app/lib/workbench-persist/t2v-store";
 import { fileToScaledDataUrl } from "@/app/lib/image-client";
+import { STYLE_PRESETS } from "@/app/lib/director/prompt-blueprint";
 
 type Character = {
   id: string;
@@ -32,7 +33,7 @@ const GAP = 48;
 const MM_W = 168;
 const MM_H = 112;
 
-type Mode = "pan" | "card" | "link" | "marquee" | null;
+type Mode = "pan" | "card" | "link" | "marquee" | "section" | null;
 type Rect = { x: number; y: number; w: number; h: number };
 
 function sizeOf(key: string) {
@@ -60,7 +61,12 @@ export default function ProjectCanvas() {
   const [tempLink, setTempLink] = useState<{ from: { x: number; y: number }; to: { x: number; y: number } } | null>(null);
   const [framing, setFraming] = useState<Record<number, boolean>>({});
   const [frameErr, setFrameErr] = useState<Record<number, string>>({});
+  const [varying, setVarying] = useState<Record<number, boolean>>({});
+  const [variants, setVariants] = useState<Record<number, { url: string; assetId: string }[]>>({});
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [styleOpen, setStyleOpen] = useState(false);
+  const [sectionLive, setSectionLive] = useState<{ id: string; x: number; y: number } | null>(null);
+  const sectionDragRef = useRef<{ id: string; sm: { x: number; y: number }; sp: { x: number; y: number } } | null>(null);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -153,26 +159,72 @@ export default function ProjectCanvas() {
     patch({ canvasLinks: canvasLinks.filter((l) => !(l.charId === charId && l.shotIdx === shotIdx)) });
   }
 
+  async function callShotFrame(i: number, count: number) {
+    const prompt = director?.prompts[i]?.providerPrompt;
+    if (!prompt?.trim()) throw new Error("缺少提示词");
+    const res = await fetch("/api/director/shot-frame", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, count, style: state.projectStyle }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "首帧生成失败");
+    return (data.frames ?? []) as { url: string; assetId: string }[];
+  }
+
+  function adoptFrame(i: number, f: { url: string; assetId: string }) {
+    patch({
+      shotFrames: { ...state.shotFrames, [i]: f.url },
+      shotFrameAssets: { ...state.shotFrameAssets, [i]: f.assetId },
+    });
+  }
+
   async function generateFrame(i: number) {
-    if (!director) return;
-    const prompt = director.prompts[i]?.providerPrompt;
-    if (!prompt?.trim() || framing[i]) return;
+    if (!director || framing[i]) return;
     setFraming((f) => ({ ...f, [i]: true }));
     setFrameErr((e) => ({ ...e, [i]: "" }));
     try {
-      const res = await fetch("/api/director/shot-frame", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "首帧生成失败");
-      patch({ shotFrames: { ...state.shotFrames, [i]: data.url as string } });
+      const frames = await callShotFrame(i, 1);
+      if (frames[0]) adoptFrame(i, frames[0]);
     } catch (err) {
       setFrameErr((e) => ({ ...e, [i]: err instanceof Error ? err.message : String(err) }));
     } finally {
       setFraming((f) => ({ ...f, [i]: false }));
     }
+  }
+
+  // 变体扇出：一次生成 3 个候选首帧，点选采用
+  async function generateVariants(i: number) {
+    if (!director || varying[i]) return;
+    setVarying((v) => ({ ...v, [i]: true }));
+    setFrameErr((e) => ({ ...e, [i]: "" }));
+    try {
+      const frames = await callShotFrame(i, 3);
+      setVariants((v) => ({ ...v, [i]: frames }));
+    } catch (err) {
+      setFrameErr((e) => ({ ...e, [i]: err instanceof Error ? err.message : String(err) }));
+    } finally {
+      setVarying((v) => ({ ...v, [i]: false }));
+    }
+  }
+
+  // 分区
+  function addSection(canvasX: number, canvasY: number) {
+    const id = `${Date.now()}`;
+    patch({
+      canvasSections: [
+        ...state.canvasSections,
+        { id, title: "分区", x: canvasX, y: canvasY, w: 520, h: 360 },
+      ],
+    });
+  }
+  function updateSection(id: string, p: Partial<{ title: string; x: number; y: number; w: number; h: number }>) {
+    patch({
+      canvasSections: state.canvasSections.map((s) => (s.id === id ? { ...s, ...p } : s)),
+    });
+  }
+  function removeSection(id: string) {
+    patch({ canvasSections: state.canvasSections.filter((s) => s.id !== id) });
   }
 
   // 删除选中：参考图便签→删除；角色卡→移出项目；分镜卡→忽略（不破坏剧本）
@@ -229,6 +281,10 @@ export default function ProjectCanvas() {
       } else if (mode === "marquee" && marqueeRef.current) {
         const r = viewportRef.current?.getBoundingClientRect();
         if (r) setMarquee({ x0: marqueeRef.current.sx, y0: marqueeRef.current.sy, x1: e.clientX - r.left, y1: e.clientY - r.top });
+      } else if (mode === "section" && sectionDragRef.current) {
+        const { id, sm, sp } = sectionDragRef.current;
+        const z = zoomRef.current;
+        setSectionLive({ id, x: sp.x + (e.clientX - sm.x) / z, y: sp.y + (e.clientY - sm.y) / z });
       }
     }
     function onUp(e: MouseEvent) {
@@ -261,12 +317,18 @@ export default function ProjectCanvas() {
           setSelected(hit);
         }
         setMarquee(null);
+      } else if (mode === "section" && sectionDragRef.current) {
+        const { id, sm, sp } = sectionDragRef.current;
+        const z = zoomRef.current;
+        updateSection(id, { x: sp.x + (e.clientX - sm.x) / z, y: sp.y + (e.clientY - sm.y) / z });
+        setSectionLive(null);
       }
       modeRef.current = null;
       dragRef.current = null;
       panRef.current = null;
       linkRef.current = null;
       marqueeRef.current = null;
+      sectionDragRef.current = null;
     }
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -275,7 +337,7 @@ export default function ProjectCanvas() {
       window.removeEventListener("mouseup", onUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [director, chars, canvasLinks, canvasRefs, characterIds, allKeys.join(",")]);
+  }, [director, chars, canvasLinks, canvasRefs, characterIds, state.canvasSections, allKeys.join(",")]);
 
   // 滚轮缩放（围绕光标）
   useEffect(() => {
@@ -333,6 +395,12 @@ export default function ProjectCanvas() {
     setLinking(true);
     const from = charConnectorScreen(charId);
     setTempLink({ from, to: from });
+  }
+  function startSectionDrag(e: React.MouseEvent, id: string, x: number, y: number) {
+    e.stopPropagation();
+    setMenu(null);
+    modeRef.current = "section";
+    sectionDragRef.current = { id, sm: { x: e.clientX, y: e.clientY }, sp: { x, y } };
   }
 
   function fitToContent() {
@@ -409,6 +477,43 @@ export default function ProjectCanvas() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[var(--bg-inset)]">
+      {/* 风格 DNA */}
+      <div className="absolute left-4 top-4 z-30">
+        <button
+          type="button"
+          onClick={() => setStyleOpen((o) => !o)}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium ${state.projectStyle ? "nav-item-active" : "btn-secondary"}`}
+        >
+          🎨 风格 DNA{state.projectStyle ? " · 已设" : ""}
+        </button>
+        {styleOpen && (
+          <div className="mt-1.5 w-64 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-xl">
+            <p className="mb-1.5 text-[11px] text-[var(--text-caption)]">统一全片色调/风格，注入所有首帧与视频生成</p>
+            <input
+              value={state.projectStyle}
+              onChange={(e) => patch({ projectStyle: e.target.value })}
+              placeholder="如 cinematic noir, teal-orange palette"
+              className="input-field w-full rounded-lg px-2.5 py-1.5 text-xs"
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {STYLE_PRESETS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => patch({ projectStyle: c.value })}
+                  className={`rounded-full px-2 py-0.5 text-[11px] ${state.projectStyle === c.value ? "nav-item-active" : "btn-secondary"}`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            {state.projectStyle && (
+              <button type="button" onClick={() => patch({ projectStyle: "" })} className="mt-2 text-[11px] text-[var(--text-caption)] hover:text-[var(--danger)]">清除风格</button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* 缩放控制 */}
       <div className="absolute right-4 top-4 z-30 flex flex-col gap-1.5">
         <button type="button" onClick={() => setZoom((z) => Math.min(2, z + 0.15))} className="btn-secondary rounded-lg p-2" title="放大"><FiZoomIn className="h-4 w-4" /></button>
@@ -440,6 +545,41 @@ export default function ProjectCanvas() {
         }}
       >
         <div className="absolute left-0 top-0 origin-top-left" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }} data-bg>
+          {/* 分区（视觉编组，置于卡片之下） */}
+          {state.canvasSections.map((s) => {
+            const live = sectionLive?.id === s.id ? sectionLive : null;
+            const x = live ? live.x : s.x;
+            const y = live ? live.y : s.y;
+            return (
+              <div
+                key={s.id}
+                className="absolute rounded-xl border-2 border-dashed border-[var(--accent)]/40 bg-[var(--accent)]/5"
+                style={{ left: x, top: y, width: s.w, height: s.h }}
+              >
+                <div
+                  onMouseDown={(e) => startSectionDrag(e, s.id, s.x, s.y)}
+                  className="flex cursor-grab items-center justify-between gap-2 rounded-t-lg bg-[var(--accent)]/15 px-3 py-1.5 active:cursor-grabbing"
+                >
+                  <input
+                    value={s.title}
+                    onChange={(e) => updateSection(s.id, { title: e.target.value })}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="w-full bg-transparent text-xs font-semibold text-[var(--accent)] outline-none"
+                  />
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => removeSection(s.id)}
+                    className="shrink-0 text-[var(--text-caption)] hover:text-[var(--danger)]"
+                    title="删除分区"
+                  >
+                    <FiTrash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
           {/* 角色卡 */}
           {importedChars.map((c) => {
             const key = `char-${c.id}`;
@@ -483,8 +623,8 @@ export default function ProjectCanvas() {
             const sb = director?.storyboard?.[i];
             const zhSummary = [sb?.action, sb?.environment].filter(Boolean).join(" · ") || sb?.narration || "（无中文描述）";
             return (
+              <Fragment key={i}>
               <div
-                key={i}
                 data-shot-idx={i}
                 onMouseDown={(e) => onCardDown(e, key)}
                 className={`group absolute cursor-grab overflow-hidden rounded-xl border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : linking ? "border-[var(--accent)]" : "border-[var(--border)]"}`}
@@ -504,6 +644,17 @@ export default function ProjectCanvas() {
                       {busy ? <FiLoader className="h-3 w-3 animate-spin" /> : <FiImage className="h-3 w-3" />}
                       {busy ? "生成中" : frameImg ? "重生成" : "生成首帧"}
                     </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => generateVariants(i)}
+                      disabled={varying[i]}
+                      title="生成 3 个变体候选"
+                      className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent)] transition-opacity hover:bg-[var(--accent-soft)] disabled:opacity-50 ${varying[i] ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                    >
+                      {varying[i] ? <FiLoader className="h-3 w-3 animate-spin" /> : <FiPlus className="h-3 w-3" />}
+                      变体
+                    </button>
                     <span className="text-[10px] text-[var(--text-caption)]">{shot.duration}s</span>
                   </div>
                 </div>
@@ -516,6 +667,36 @@ export default function ProjectCanvas() {
                 </p>
                 {frameErr[i] && <p className="px-2.5 text-[9px] leading-tight text-[var(--danger)] line-clamp-2">{frameErr[i]}</p>}
               </div>
+              {variants[i]?.length ? (
+                <div className="absolute flex gap-1.5 rounded-lg border border-[var(--accent)] bg-[var(--bg-surface)] p-1.5 shadow-xl" style={{ left: p.x, top: p.y + SHOT_H + 8, width: SHOT_W, zIndex: 5 }}>
+                  {variants[i].map((f, vi) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={vi}
+                      src={f.url}
+                      alt={`变体${vi + 1}`}
+                      title="点击采用此变体"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => {
+                        adoptFrame(i, f);
+                        setVariants((v) => { const n = { ...v }; delete n[i]; return n; });
+                      }}
+                      className="h-16 w-12 cursor-pointer rounded object-cover hover:ring-2 hover:ring-[var(--accent)]"
+                      draggable={false}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => setVariants((v) => { const n = { ...v }; delete n[i]; return n; })}
+                    className="self-start text-[var(--text-caption)] hover:text-[var(--danger)]"
+                    title="关闭变体"
+                  >
+                    <FiTrash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : null}
+              </Fragment>
             );
           })}
 
@@ -571,6 +752,7 @@ export default function ProjectCanvas() {
           <div className="fixed inset-0 z-30" onClick={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null); }} />
           <div className="absolute z-40 min-w-[150px] rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] py-1 shadow-xl" style={{ left: menu.x, top: menu.y }}>
             <button type="button" onClick={() => fileInput.current?.click()} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-inset)]"><FiPlus className="h-3.5 w-3.5" />添加参考图</button>
+            <button type="button" onClick={() => { addSection((menu.x - pan.x) / zoom, (menu.y - pan.y) / zoom); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-inset)]"><FiPlus className="h-3.5 w-3.5" />添加分区</button>
             <button type="button" onClick={() => { fitToContent(); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-inset)]"><FiMaximize className="h-3.5 w-3.5" />适应全部内容</button>
             {selected.size > 0 && (
               <button type="button" onClick={() => { deleteSelected(); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-[var(--danger)] hover:bg-[var(--bg-inset)]"><FiTrash2 className="h-3.5 w-3.5" />删除选中（{selected.size}）</button>

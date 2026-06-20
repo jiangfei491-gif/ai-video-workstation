@@ -74,8 +74,14 @@ export type T2VWorkbenchState = {
   canvasLinks: { charId: string; shotIdx: number }[];
   /** 项目画布：各分镜就地生成的首帧图 url（按镜头索引） */
   shotFrames: Record<number, string>;
+  /** 项目画布：各分镜首帧的图片资产 id（用于 i2v 参考） */
+  shotFrameAssets: Record<number, string>;
   /** 项目画布：参考图便签（拖入/右键添加） */
   canvasRefs: { id: string; url: string }[];
+  /** 项目画布：分区（视觉编组） */
+  canvasSections: { id: string; title: string; x: number; y: number; w: number; h: number }[];
+  /** 全片风格 DNA：注入所有首帧/视频生成，统一全片色调与风格 */
+  projectStyle: string;
   activeShotIdx: number;
   testResult: VeoTestResult | null;
   shotLock: ShotLockRecord | null;

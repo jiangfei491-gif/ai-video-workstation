@@ -159,6 +159,7 @@ export default function T2VWorkbench() {
     runT2VVeoTask(async () => {
       const step2Timer = setTimeout(() => patch({ veoProgressStep: 2 }), 1200);
       try {
+        const frameAsset = getT2VState().shotFrameAssets?.[activeShotIdx];
         const res = await fetch("/api/veo/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -166,7 +167,9 @@ export default function T2VWorkbench() {
             shotId,
             workspaceMode,
             mode: "test",
-            type: "t2v",
+            // 有就地生成的首帧 → 图生视频，用首帧当参考保持一致
+            type: frameAsset ? "i2v" : "t2v",
+            imageAssetId: frameAsset,
             prompt: activePrompt.providerPrompt,
             model: VEO_MODEL,
             durationSec: veoDurationSec,
@@ -309,6 +312,7 @@ export default function T2VWorkbench() {
   async function generateOneShot(index: number, prompt: string) {
     patchBatchShot(index, { status: "generating", videoUrl: null });
     try {
+      const frameAsset = getT2VState().shotFrameAssets?.[index];
       const res = await fetch("/api/veo/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -316,7 +320,8 @@ export default function T2VWorkbench() {
           shotId: `t2v-shot-${index + 1}`,
           workspaceMode,
           mode: "test",
-          type: "t2v",
+          type: frameAsset ? "i2v" : "t2v",
+          imageAssetId: frameAsset,
           prompt,
           model: VEO_MODEL,
           durationSec: veoDurationSec,

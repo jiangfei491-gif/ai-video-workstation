@@ -69,15 +69,23 @@ function vertexPollUrl(config: VeoConfig): string {
   return `https://${config.location}-aiplatform.googleapis.com/v1/projects/${config.projectId}/locations/${config.location}/publishers/google/models/${config.modelId}:fetchPredictOperation`;
 }
 
+export type VeoReferenceImage = {
+  bytesBase64Encoded: string;
+  mimeType: string;
+};
+
 function buildRequestBody(
   prompt: string,
   config: VeoConfig,
-  durationSeconds?: number
+  durationSeconds?: number,
+  image?: VeoReferenceImage
 ): unknown {
   const dur = durationSeconds ?? Number(config.durationSeconds);
   const allowed: number = dur <= 4 ? 4 : dur <= 6 ? 6 : 8;
+  // 图生视频：参考图作为首帧放进 instance（Gemini Veo i2v 格式）
+  const instance = image ? { prompt, image } : { prompt };
   return {
-    instances: [{ prompt }],
+    instances: [instance],
     parameters: {
       aspectRatio: config.aspectRatio,
       durationSeconds: allowed,
@@ -142,7 +150,8 @@ function extractVideoBytesFromOperation(body: Record<string, unknown>): Buffer |
 export async function startVeoGeneration(
   prompt: string,
   onProgress?: VeoProgressCallback,
-  durationSeconds?: number
+  durationSeconds?: number,
+  image?: VeoReferenceImage
 ): Promise<StartGenerationResult> {
   const config = getVeoConfig();
   assertVeoConfigured(config);
@@ -150,7 +159,9 @@ export async function startVeoGeneration(
   const url =
     config.apiMode === "vertex" ? vertexStartUrl(config) : geminiStartUrl(config);
 
-  onProgress?.(`提交视频生成任务（${config.modelId}）…`);
+  onProgress?.(
+    `提交${image ? "图生" : "文生"}视频生成任务（${config.modelId}）…`
+  );
 
   const res = await fetch(url, {
     method: "POST",
@@ -158,7 +169,7 @@ export async function startVeoGeneration(
       "Content-Type": "application/json",
       ...authHeaders(config),
     },
-    body: JSON.stringify(buildRequestBody(prompt, config, durationSeconds)),
+    body: JSON.stringify(buildRequestBody(prompt, config, durationSeconds, image)),
   });
 
   if (!res.ok) {
@@ -330,12 +341,14 @@ export async function downloadVeoVideo(
 export async function generateVeoVideoFromPrompt(
   prompt: string,
   onProgress?: VeoProgressCallback,
-  durationSeconds?: number
+  durationSeconds?: number,
+  image?: VeoReferenceImage
 ): Promise<{ taskId: string; buffer: Buffer }> {
   const { operationName, taskId } = await startVeoGeneration(
     prompt,
     onProgress,
-    durationSeconds
+    durationSeconds,
+    image
   );
   const result = await pollVeoOperationUntilDone(operationName, onProgress);
 

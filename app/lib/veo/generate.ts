@@ -126,17 +126,27 @@ export async function generateWithVeo(
       ? getShotLockById(request.shotLockId!)!.snapshot.duration
       : resolveDurationForMode(mode));
 
+  // 图生视频：把参考图（角色首帧）作为首帧真正传给 Veo，做一致性锚定
+  let referenceImage: { bytesBase64Encoded: string; mimeType: string } | undefined;
   if (type === "i2v") {
-    if (preview) {
-      if (!request.imageBase64?.trim()) {
-        throw new Error("预览模式图生视频需要参考图片");
-      }
-      prompt = `${prompt}\n[Reference image attached]`;
-    } else if (request.imageAssetId) {
-      readImageBuffer(request.imageAssetId);
-      prompt = `${prompt}\n[Reference image asset: ${request.imageAssetId}]`;
-    } else if (mode === "test") {
-      throw new Error("图生视频测试模式需要参考图资源");
+    if (request.imageAssetId) {
+      const buf = readImageBuffer(request.imageAssetId);
+      referenceImage = {
+        bytesBase64Encoded: buf.toString("base64"),
+        mimeType: "image/png",
+      };
+    } else if (request.imageBase64?.trim()) {
+      referenceImage = {
+        bytesBase64Encoded: request.imageBase64.replace(
+          /^data:image\/[^;]+;base64,/,
+          ""
+        ),
+        mimeType: "image/png",
+      };
+    } else if (mode === "test" && !preview) {
+      throw new Error("图生视频需要参考图资源");
+    } else if (preview) {
+      throw new Error("预览模式图生视频需要参考图片");
     }
   }
 
@@ -148,7 +158,8 @@ export async function generateWithVeo(
     const { taskId, buffer } = await generateVeoVideoFromPrompt(
       prompt,
       undefined,
-      finalDuration
+      finalDuration,
+      referenceImage
     );
 
     if (preview) {
