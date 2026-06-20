@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FiUser, FiZoomIn, FiZoomOut, FiMaximize } from "react-icons/fi";
+import { FiUser, FiZoomIn, FiZoomOut, FiMaximize, FiImage, FiLoader } from "react-icons/fi";
 import { useT2VWorkbenchStore } from "@/app/lib/workbench-persist/t2v-store";
 
 type Character = {
@@ -13,7 +13,7 @@ type Character = {
 };
 
 const SHOT_W = 220;
-const SHOT_H = 160;
+const SHOT_H = 210;
 const CHAR_W = 170;
 const CHAR_H = 220;
 const GAP = 48;
@@ -35,6 +35,8 @@ export default function ProjectCanvas() {
     from: { x: number; y: number };
     to: { x: number; y: number };
   } | null>(null);
+  const [framing, setFraming] = useState<Record<number, boolean>>({});
+  const [frameErr, setFrameErr] = useState<Record<number, string>>({});
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const modeRef = useRef<Mode>(null);
@@ -123,6 +125,32 @@ export default function ProjectCanvas() {
         (l) => !(l.charId === charId && l.shotIdx === shotIdx)
       ),
     });
+  }
+
+  // 就地生成首帧（走 gpt-image，@角色名 自动展开为外观）
+  async function generateFrame(i: number) {
+    if (!director) return;
+    const prompt = director.prompts[i]?.providerPrompt;
+    if (!prompt?.trim() || framing[i]) return;
+    setFraming((f) => ({ ...f, [i]: true }));
+    setFrameErr((e) => ({ ...e, [i]: "" }));
+    try {
+      const res = await fetch("/api/director/shot-frame", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "首帧生成失败");
+      patch({ shotFrames: { ...state.shotFrames, [i]: data.url as string } });
+    } catch (err) {
+      setFrameErr((e) => ({
+        ...e,
+        [i]: err instanceof Error ? err.message : String(err),
+      }));
+    } finally {
+      setFraming((f) => ({ ...f, [i]: false }));
+    }
   }
 
   // 全局拖拽/连线监听
@@ -309,7 +337,14 @@ export default function ProjectCanvas() {
           {/* 分镜卡 */}
           {shots.map((shot, i) => {
             const p = posOf(`shot-${i}`);
-            const frame = state.batchResults?.[i];
+            const frameVideo = state.batchResults?.[i];
+            const frameImg = state.shotFrames?.[i];
+            const busy = framing[i];
+            const sb = director?.storyboard?.[i];
+            const zhSummary =
+              [sb?.action, sb?.environment].filter(Boolean).join(" · ") ||
+              sb?.narration ||
+              "（无中文描述，可在视频创作里查看）";
             return (
               <div
                 key={i}
@@ -322,14 +357,44 @@ export default function ProjectCanvas() {
               >
                 <div className="flex items-center justify-between bg-[var(--bg-inset)] px-2.5 py-1">
                   <span className="text-xs font-semibold text-[var(--text-primary)]">镜头 {i + 1}</span>
-                  <span className="text-[10px] text-[var(--text-caption)]">{shot.duration}s</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => generateFrame(i)}
+                      disabled={busy}
+                      title="生成首帧（含已选角角色）"
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent)] hover:bg-[var(--accent-soft)] disabled:opacity-50"
+                    >
+                      {busy ? (
+                        <FiLoader className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <FiImage className="h-3 w-3" />
+                      )}
+                      {busy ? "生成中" : frameImg ? "重生成" : "生成首帧"}
+                    </button>
+                    <span className="text-[10px] text-[var(--text-caption)]">{shot.duration}s</span>
+                  </div>
                 </div>
-                {frame?.status === "success" && frame.videoUrl ? (
-                  <video src={frame.videoUrl} className="h-[78px] w-full object-cover" muted playsInline />
+                {frameImg ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={frameImg} alt={`镜头${i + 1}首帧`} className="h-[110px] w-full object-cover" draggable={false} />
+                ) : frameVideo?.status === "success" && frameVideo.videoUrl ? (
+                  <video src={frameVideo.videoUrl} className="h-[110px] w-full object-cover" muted playsInline />
                 ) : null}
-                <p className="line-clamp-4 px-2.5 py-1.5 text-[10px] leading-snug text-[var(--text-secondary)]">
-                  {shot.providerPrompt}
+                <p
+                  title={shot.providerPrompt}
+                  className={`px-2.5 py-1.5 text-[11px] leading-snug text-[var(--text-secondary)] ${
+                    frameImg ? "line-clamp-2" : "line-clamp-5"
+                  }`}
+                >
+                  {zhSummary}
                 </p>
+                {frameErr[i] && (
+                  <p className="px-2.5 text-[9px] leading-tight text-[var(--danger)] line-clamp-2">
+                    {frameErr[i]}
+                  </p>
+                )}
               </div>
             );
           })}

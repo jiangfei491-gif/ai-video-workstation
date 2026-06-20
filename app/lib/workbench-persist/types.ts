@@ -72,6 +72,8 @@ export type T2VWorkbenchState = {
   canvasPositions: Record<string, { x: number; y: number }>;
   /** 项目画布：角色→分镜的选角连线 */
   canvasLinks: { charId: string; shotIdx: number }[];
+  /** 项目画布：各分镜就地生成的首帧图 url（按镜头索引） */
+  shotFrames: Record<number, string>;
   activeShotIdx: number;
   testResult: VeoTestResult | null;
   shotLock: ShotLockRecord | null;

@@ -37,6 +37,7 @@ const defaultState: T2VWorkbenchState = {
   characterIds: [],
   canvasPositions: {},
   canvasLinks: [],
+  shotFrames: {},
   activeShotIdx: 0,
   testResult: null,
   shotLock: null,
