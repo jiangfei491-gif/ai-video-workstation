@@ -23,12 +23,12 @@ type Character = {
   createdAt: string;
 };
 
-const SHOT_W = 220;
-const SHOT_H = 210;
-const CHAR_W = 170;
-const CHAR_H = 220;
-const REF_W = 180;
-const REF_H = 180;
+const SHOT_W = 280;
+const SHOT_H = 300;
+const CHAR_W = 220;
+const CHAR_H = 290;
+const REF_W = 220;
+const REF_H = 220;
 const GAP = 48;
 const MM_W = 168;
 const MM_H = 112;
@@ -596,7 +596,7 @@ export default function ProjectCanvas() {
                     value={s.title}
                     onChange={(e) => updateSection(s.id, { title: e.target.value })}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="w-full bg-transparent text-xs font-semibold text-[var(--accent)] outline-none"
+                    className="w-full bg-transparent text-sm font-semibold text-[var(--accent)] outline-none"
                   />
                   <button
                     type="button"
@@ -625,17 +625,17 @@ export default function ProjectCanvas() {
                 className={`group absolute cursor-grab rounded-xl border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)]"}`}
                 style={{ left: p.x, top: p.y, width: CHAR_W, height: CHAR_H }}
               >
-                <div className="flex h-[150px] w-full items-center justify-center overflow-hidden rounded-t-xl bg-black/30">
+                <div className="flex h-[190px] w-full items-center justify-center overflow-hidden rounded-t-xl bg-black/30">
                   {c.refImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.refImageUrl} alt={c.name} className="h-full w-full object-cover" draggable={false} />
                   ) : (
-                    <FiUser className="h-8 w-8 text-[var(--text-secondary)]" />
+                    <FiUser className="h-9 w-9 text-[var(--text-secondary)]" />
                   )}
                 </div>
-                <div className="px-2.5 py-1.5">
-                  <span className="font-mono text-xs font-semibold text-[var(--accent)]">@{c.name}</span>
-                  <p className="line-clamp-2 text-[10px] leading-snug text-[var(--text-caption)]">{c.appearance}</p>
+                <div className="px-3 py-2">
+                  <span className="font-mono text-sm font-semibold text-[var(--accent)]">@{c.name}</span>
+                  <p className="line-clamp-2 text-xs leading-snug text-[var(--text-caption)]">{c.appearance}</p>
                 </div>
                 <div
                   onMouseDown={(e) => startLink(e, key)}
@@ -669,42 +669,68 @@ export default function ProjectCanvas() {
                   title="拖到另一张卡连线（角色→分镜=选角）"
                   className={`absolute -right-2.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[var(--accent)] shadow transition-opacity ${linking ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`}
                 />
-                <div className="flex items-center justify-between rounded-t-xl bg-[var(--bg-inset)] px-2.5 py-1">
-                  <span className="text-xs font-semibold text-[var(--text-primary)]">镜头 {i + 1}</span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => generateFrame(i)}
-                      disabled={busy}
-                      title="生成首帧（含已选角角色）"
-                      className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent)] transition-opacity hover:bg-[var(--accent-soft)] disabled:opacity-50 ${busy ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                    >
-                      {busy ? <FiLoader className="h-3 w-3 animate-spin" /> : <FiImage className="h-3 w-3" />}
-                      {busy ? "生成中" : frameImg ? "重生成" : "生成首帧"}
-                    </button>
+                <div className="flex items-center justify-between rounded-t-xl bg-[var(--bg-inset)] px-3 py-1.5">
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">镜头 {i + 1}</span>
+                  <span className="text-xs text-[var(--text-caption)]">{shot.duration}s</span>
+                </div>
+
+                {/* 画面预览区（始终存在） */}
+                <div className="relative h-[160px] w-full bg-black/30">
+                  {frameImg ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={frameImg} alt={`镜头${i + 1}`} className="h-full w-full object-cover" draggable={false} />
+                  ) : (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2">
+                      <span className="text-xs text-[var(--text-caption)]">未生成画面</span>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={() => generateFrame(i)}
+                        disabled={busy}
+                        className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                      >
+                        {busy ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiImage className="h-3.5 w-3.5" />}
+                        {busy ? "生成中…" : "生成画面"}
+                      </button>
+                    </div>
+                  )}
+                  {busy && frameImg && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+                      <FiLoader className="h-6 w-6 animate-spin" />
+                    </span>
+                  )}
+                  {/* 画面操作（右下角，hover 显示） */}
+                  <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    {frameImg && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={() => generateFrame(i)}
+                        disabled={busy}
+                        title="重新生成画面"
+                        className="rounded-md bg-black/60 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/80"
+                      >
+                        重生成
+                      </button>
+                    )}
                     <button
                       type="button"
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={() => generateVariants(i)}
                       disabled={varying[i]}
                       title="生成 3 个变体候选"
-                      className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent)] transition-opacity hover:bg-[var(--accent-soft)] disabled:opacity-50 ${varying[i] ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                      className="inline-flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/80"
                     >
                       {varying[i] ? <FiLoader className="h-3 w-3 animate-spin" /> : <FiPlus className="h-3 w-3" />}
                       变体
                     </button>
-                    <span className="text-[10px] text-[var(--text-caption)]">{shot.duration}s</span>
                   </div>
                 </div>
-                {frameImg ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={frameImg} alt={`镜头${i + 1}`} className="h-[110px] w-full object-cover" draggable={false} />
-                ) : null}
-                <p title={shot.providerPrompt} className={`px-2.5 py-1.5 text-[11px] leading-snug text-[var(--text-secondary)] ${frameImg ? "line-clamp-2" : "line-clamp-5"}`}>
+
+                <p title={shot.providerPrompt} className="line-clamp-3 px-3 py-2 text-[13px] leading-snug text-[var(--text-secondary)]">
                   {zhSummary}
                 </p>
-                {frameErr[i] && <p className="px-2.5 text-[9px] leading-tight text-[var(--danger)] line-clamp-2">{frameErr[i]}</p>}
+                {frameErr[i] && <p className="px-3 pb-1 text-[11px] leading-tight text-[var(--danger)] line-clamp-2">{frameErr[i]}</p>}
               </div>
               {variants[i]?.length ? (
                 <div className="absolute flex gap-1.5 rounded-lg border border-[var(--accent)] bg-[var(--bg-surface)] p-1.5 shadow-xl" style={{ left: p.x, top: p.y + SHOT_H + 8, width: SHOT_W, zIndex: 5 }}>
@@ -836,7 +862,7 @@ export default function ProjectCanvas() {
 
       {/* 底部提示 */}
       {hasContent && (
-        <div className="absolute bottom-4 left-1/2 z-20 max-w-[92%] -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] px-5 py-2 text-center text-[13px] font-medium text-[var(--text-secondary)] shadow-lg">
+        <div className="absolute bottom-4 left-1/2 z-20 max-w-[92%] -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] px-5 py-2 text-center text-sm font-medium text-[var(--text-secondary)] shadow-lg">
           拖空白平移 · 滚轮缩放 · 拖卡片右侧圆点到另一张卡连线（角色→分镜=选角）· 双击连线删除 · Shift/⌘框选 · Delete 删除
         </div>
       )}
