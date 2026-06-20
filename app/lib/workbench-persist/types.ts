@@ -66,6 +66,12 @@ export type T2VWorkbenchState = {
   subtitleText: string;
   mode: GenerationMode;
   director: DirectorState | null;
+  /** 本项目导入的角色 id（来自角色库，移除仅移出项目、不删仓库） */
+  characterIds: string[];
+  /** 项目画布：卡片位置（key 如 shot-0 / char-<id>） */
+  canvasPositions: Record<string, { x: number; y: number }>;
+  /** 项目画布：角色→分镜的选角连线 */
+  canvasLinks: { charId: string; shotIdx: number }[];
   activeShotIdx: number;
   testResult: VeoTestResult | null;
   shotLock: ShotLockRecord | null;

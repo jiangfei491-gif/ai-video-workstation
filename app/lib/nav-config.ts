@@ -1,5 +1,6 @@
 export type AppNavId =
   | "ai-video"
+  | "canvas"
   | "characters"
   | "dynamic-image"
   | "history"
@@ -11,6 +12,7 @@ export const APP_NAV_ITEMS: {
   href: string;
 }[] = [
   { id: "ai-video", label: "视频创作", href: "/ai-video" },
+  { id: "canvas", label: "项目画布", href: "/canvas" },
   { id: "characters", label: "角色库", href: "/characters" },
   { id: "dynamic-image", label: "动态图片", href: "/dynamic-image" },
   { id: "history", label: "历史记录", href: "/history" },

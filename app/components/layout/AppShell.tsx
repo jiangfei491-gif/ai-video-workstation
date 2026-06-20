@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   FiClock,
   FiFilm,
+  FiGrid,
   FiMoon,
   FiSun,
   FiTrendingUp,
@@ -21,6 +22,7 @@ import { patchUiState } from "@/app/lib/ui-state/store";
 
 const NAV_ICONS: Record<AppNavId, React.ComponentType<{ className?: string }>> = {
   "ai-video": FiVideo,
+  canvas: FiGrid,
   characters: FiUsers,
   "dynamic-image": FiFilm,
   history: FiClock,

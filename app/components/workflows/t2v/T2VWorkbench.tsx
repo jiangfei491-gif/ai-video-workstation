@@ -10,7 +10,7 @@ import VeoProgressPanel from "@/app/components/workflows/shared/VeoProgressPanel
 import VideoPreviewPanel from "@/app/components/workflows/shared/VideoPreviewPanel";
 import WorkbenchSection from "@/app/components/workflows/shared/WorkbenchSection";
 import BatchGeneratePanel from "@/app/components/workflows/t2v/BatchGeneratePanel";
-import CharacterLibraryPanel from "@/app/components/workflows/t2v/CharacterLibraryPanel";
+import ProjectCharactersPanel from "@/app/components/workflows/t2v/ProjectCharactersPanel";
 import StoryboardPanel from "@/app/components/workflows/t2v/StoryboardPanel";
 import VideoSettingsPanel from "@/app/components/workflows/t2v/VideoSettingsPanel";
 import { resolveRequestSeed } from "@/app/lib/generation-params";
@@ -515,8 +515,11 @@ export default function T2VWorkbench() {
           </div>
         </WorkbenchSection>
 
-        <WorkbenchSection title="角色库">
-          <CharacterLibraryPanel />
+        <WorkbenchSection title="本项目角色">
+          <ProjectCharactersPanel
+            characterIds={state.characterIds}
+            onChange={(ids) => patch({ characterIds: ids })}
+          />
         </WorkbenchSection>
 
         {director && (

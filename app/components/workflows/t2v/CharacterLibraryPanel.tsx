@@ -193,7 +193,7 @@ export default function CharacterLibraryPanel() {
                   className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[var(--accent)] hover:underline disabled:opacity-50"
                 >
                   <FiRefreshCw className={`h-3 w-3 ${portraitId === c.id ? "animate-spin" : ""}`} />
-                  {portraitId === c.id ? "生成中…" : c.refImageUrl ? "重新生成角色图" : "生成角色图"}
+                  {portraitId === c.id ? "生成设定图中…" : c.refImageUrl ? "重新生成设定图" : "生成角色设定图"}
                 </button>
               </div>
             </div>
@@ -300,7 +300,7 @@ export default function CharacterLibraryPanel() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-full max-w-lg flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] shadow-2xl"
+            className="flex max-h-full max-w-4xl flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] shadow-2xl"
           >
             <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5">
               <span className="font-mono text-sm font-semibold text-[var(--accent)]">
