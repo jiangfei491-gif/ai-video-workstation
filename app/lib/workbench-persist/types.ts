@@ -80,6 +80,8 @@ export type T2VWorkbenchState = {
   canvasRefs: { id: string; url: string }[];
   /** 项目画布：分区（视觉编组） */
   canvasSections: { id: string; title: string; x: number; y: number; w: number; h: number }[];
+  /** 项目画布：任意卡片之间的关联连线（角色→分镜走 canvasLinks 选角，其余走这里） */
+  canvasEdges: { id: string; from: string; to: string }[];
   /** 全片风格 DNA：注入所有首帧/视频生成，统一全片色调与风格 */
   projectStyle: string;
   activeShotIdx: number;

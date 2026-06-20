@@ -73,7 +73,7 @@ export default function ProjectCanvas() {
   const modeRef = useRef<Mode>(null);
   const dragRef = useRef<{ sm: { x: number; y: number }; start: Record<string, { x: number; y: number }> } | null>(null);
   const panRef = useRef<{ sm: { x: number; y: number }; sp: { x: number; y: number } } | null>(null);
-  const linkRef = useRef<{ charId: string } | null>(null);
+  const linkRef = useRef<{ fromKey: string } | null>(null);
   const marqueeRef = useRef<{ sx: number; sy: number } | null>(null);
 
   const zoomRef = useRef(zoom);
@@ -134,10 +134,31 @@ export default function ProjectCanvas() {
     const p = posOf(key);
     return { x: pan.x + (p.x + w / 2) * zoom, y: pan.y + (p.y + h / 2) * zoom };
   };
-  const charConnectorScreen = (id: string) => {
-    const p = posOf(`char-${id}`);
-    return { x: pan.x + (p.x + CHAR_W) * zoom, y: pan.y + (p.y + CHAR_H / 2) * zoom };
-  };
+  const charConnectorScreen = (id: string) => handleScreen(`char-${id}`);
+  function handleScreen(key: string) {
+    const p = posOf(key);
+    const s = sizeOf(key);
+    return { x: pan.x + (p.x + s.w) * zoom, y: pan.y + (p.y + s.h / 2) * zoom };
+  }
+  function cardCenterScreen(key: string) {
+    const p = posOf(key);
+    const s = sizeOf(key);
+    return { x: pan.x + (p.x + s.w / 2) * zoom, y: pan.y + (p.y + s.h / 2) * zoom };
+  }
+  function keyExists(key: string) {
+    if (key.startsWith("char-")) return importedChars.some((c) => `char-${c.id}` === key);
+    if (key.startsWith("ref-")) return canvasRefs.some((r) => `ref-${r.id}` === key);
+    if (key.startsWith("shot-")) return Number(key.slice(5)) < shots.length;
+    return false;
+  }
+  function addEdge(from: string, to: string) {
+    if (from === to) return;
+    if (state.canvasEdges.some((ed) => (ed.from === from && ed.to === to) || (ed.from === to && ed.to === from))) return;
+    patch({ canvasEdges: [...state.canvasEdges, { id: `${Date.now()}`, from, to }] });
+  }
+  function removeEdge(id: string) {
+    patch({ canvasEdges: state.canvasEdges.filter((ed) => ed.id !== id) });
+  }
 
   function castCharacter(charId: string, shotIdx: number) {
     if (!director) return;
@@ -293,8 +314,18 @@ export default function ProjectCanvas() {
         patch({ canvasPositions: positionsRef.current });
       } else if (mode === "link" && linkRef.current) {
         const el = document.elementFromPoint(e.clientX, e.clientY);
-        const shotEl = el?.closest("[data-shot-idx]") as HTMLElement | null;
-        if (shotEl?.dataset.shotIdx != null) castCharacter(linkRef.current.charId, Number(shotEl.dataset.shotIdx));
+        const targetEl = el?.closest("[data-card-key]") as HTMLElement | null;
+        const toKey = targetEl?.dataset.cardKey;
+        const fromKey = linkRef.current.fromKey;
+        if (toKey && toKey !== fromKey) {
+          if (fromKey.startsWith("char-") && toKey.startsWith("shot-")) {
+            castCharacter(fromKey.slice(5), Number(toKey.slice(5)));
+          } else if (fromKey.startsWith("shot-") && toKey.startsWith("char-")) {
+            castCharacter(toKey.slice(5), Number(fromKey.slice(5)));
+          } else {
+            addEdge(fromKey, toKey);
+          }
+        }
         setLinking(false);
         setTempLink(null);
       } else if (mode === "marquee" && marqueeRef.current) {
@@ -337,7 +368,7 @@ export default function ProjectCanvas() {
       window.removeEventListener("mouseup", onUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [director, chars, canvasLinks, canvasRefs, characterIds, state.canvasSections, allKeys.join(",")]);
+  }, [director, chars, canvasLinks, canvasRefs, characterIds, state.canvasSections, state.canvasEdges, allKeys.join(",")]);
 
   // 滚轮缩放（围绕光标）
   useEffect(() => {
@@ -388,12 +419,13 @@ export default function ProjectCanvas() {
       panRef.current = { sm: { x: e.clientX, y: e.clientY }, sp: pan };
     }
   }
-  function startLink(e: React.MouseEvent, charId: string) {
+  function startLink(e: React.MouseEvent, fromKey: string) {
     e.stopPropagation();
+    setMenu(null);
     modeRef.current = "link";
-    linkRef.current = { charId };
+    linkRef.current = { fromKey };
     setLinking(true);
-    const from = charConnectorScreen(charId);
+    const from = handleScreen(fromKey);
     setTempLink({ from, to: from });
   }
   function startSectionDrag(e: React.MouseEvent, id: string, x: number, y: number) {
@@ -588,11 +620,12 @@ export default function ProjectCanvas() {
             return (
               <div
                 key={c.id}
+                data-card-key={key}
                 onMouseDown={(e) => onCardDown(e, key)}
-                className={`group absolute cursor-grab overflow-hidden rounded-xl border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)]"}`}
+                className={`group absolute cursor-grab rounded-xl border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)]"}`}
                 style={{ left: p.x, top: p.y, width: CHAR_W, height: CHAR_H }}
               >
-                <div className="flex h-[150px] w-full items-center justify-center bg-black/30">
+                <div className="flex h-[150px] w-full items-center justify-center overflow-hidden rounded-t-xl bg-black/30">
                   {c.refImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.refImageUrl} alt={c.name} className="h-full w-full object-cover" draggable={false} />
@@ -605,9 +638,9 @@ export default function ProjectCanvas() {
                   <p className="line-clamp-2 text-[10px] leading-snug text-[var(--text-caption)]">{c.appearance}</p>
                 </div>
                 <div
-                  onMouseDown={(e) => startLink(e, c.id)}
-                  title="拖到分镜 = 选角（注入 @角色名）"
-                  className={`absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[var(--accent)] shadow transition-opacity ${linking ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                  onMouseDown={(e) => startLink(e, key)}
+                  title="拖到另一张卡连线（角色→分镜=选角）"
+                  className={`absolute -right-2.5 top-1/2 h-5 w-5 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[var(--accent)] shadow transition-opacity ${linking ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`}
                 />
               </div>
             );
@@ -626,11 +659,17 @@ export default function ProjectCanvas() {
               <Fragment key={i}>
               <div
                 data-shot-idx={i}
+                data-card-key={key}
                 onMouseDown={(e) => onCardDown(e, key)}
-                className={`group absolute cursor-grab overflow-hidden rounded-xl border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : linking ? "border-[var(--accent)]" : "border-[var(--border)]"}`}
+                className={`group absolute cursor-grab rounded-xl border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : linking ? "border-[var(--accent)]" : "border-[var(--border)]"}`}
                 style={{ left: p.x, top: p.y, width: SHOT_W, height: SHOT_H }}
               >
-                <div className="flex items-center justify-between bg-[var(--bg-inset)] px-2.5 py-1">
+                <div
+                  onMouseDown={(e) => startLink(e, key)}
+                  title="拖到另一张卡连线（角色→分镜=选角）"
+                  className={`absolute -right-2.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[var(--accent)] shadow transition-opacity ${linking ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`}
+                />
+                <div className="flex items-center justify-between rounded-t-xl bg-[var(--bg-inset)] px-2.5 py-1">
                   <span className="text-xs font-semibold text-[var(--text-primary)]">镜头 {i + 1}</span>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -708,13 +747,19 @@ export default function ProjectCanvas() {
             return (
               <div
                 key={r.id}
+                data-card-key={key}
                 onMouseDown={(e) => onCardDown(e, key)}
-                className={`group absolute cursor-grab overflow-hidden rounded-lg border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)]"}`}
+                className={`group absolute cursor-grab rounded-lg border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)]"}`}
                 style={{ left: p.x, top: p.y, width: REF_W, height: REF_H }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={r.url} alt="参考图" className="h-full w-full object-cover" draggable={false} />
+                <img src={r.url} alt="参考图" className="h-full w-full rounded-lg object-cover" draggable={false} />
                 <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[9px] text-white">参考</span>
+                <div
+                  onMouseDown={(e) => startLink(e, key)}
+                  title="拖到另一张卡连线"
+                  className={`absolute -right-2.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[var(--accent)] shadow transition-opacity ${linking ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`}
+                />
               </div>
             );
           })}
@@ -734,6 +779,19 @@ export default function ProjectCanvas() {
                   <title>点击/双击连线移除选角</title>
                 </circle>
                 <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 + 3} textAnchor="middle" className="pointer-events-none" fontSize={9} fill="var(--accent)">×</text>
+              </g>
+            );
+          })}
+          {state.canvasEdges.map((edge) => {
+            if (!keyExists(edge.from) || !keyExists(edge.to)) return null;
+            const a = cardCenterScreen(edge.from);
+            const b = cardCenterScreen(edge.to);
+            return (
+              <g key={edge.id}>
+                <path d={`M ${a.x} ${a.y} C ${a.x + 50} ${a.y}, ${b.x - 50} ${b.y}, ${b.x} ${b.y}`} fill="none" stroke="var(--text-caption)" strokeWidth={1.8} opacity={0.55} />
+                <path className="pointer-events-auto cursor-pointer" d={`M ${a.x} ${a.y} C ${a.x + 50} ${a.y}, ${b.x - 50} ${b.y}, ${b.x} ${b.y}`} fill="none" stroke="transparent" strokeWidth={12} onDoubleClick={() => removeEdge(edge.id)}>
+                  <title>双击移除连线</title>
+                </path>
               </g>
             );
           })}
@@ -778,8 +836,8 @@ export default function ProjectCanvas() {
 
       {/* 底部提示 */}
       {hasContent && (
-        <div className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[var(--bg-surface)]/90 px-4 py-1.5 text-[11px] text-[var(--text-caption)] shadow">
-          拖空白平移 · 滚轮缩放 · Shift/⌘+拖框选 · 拖角色圆点到分镜=选角 · Delete 删除 · 右键加参考图
+        <div className="absolute bottom-4 left-1/2 z-20 max-w-[92%] -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] px-5 py-2 text-center text-[13px] font-medium text-[var(--text-secondary)] shadow-lg">
+          拖空白平移 · 滚轮缩放 · 拖卡片右侧圆点到另一张卡连线（角色→分镜=选角）· 双击连线删除 · Shift/⌘框选 · Delete 删除
         </div>
       )}
     </div>
