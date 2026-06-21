@@ -1,6 +1,21 @@
 import { listCharacters } from "./character-store";
+import { listScenes } from "./scene-store";
 
 type RefChar = { name: string; appearance: string };
+type RefItem = { name: string; detail: string };
+
+/** 通用 @名字 展开：把 @name 替换为 "name (detail)"，长名优先匹配 */
+function expandRefs(prompt: string, items: RefItem[]): string {
+  if (!prompt.includes("@") || items.length === 0) return prompt;
+  const sorted = [...items].sort((a, b) => b.name.length - a.name.length);
+  let out = prompt;
+  for (const it of sorted) {
+    if (!it.name.trim() || !it.detail.trim()) continue;
+    const token = `@${it.name}`;
+    if (out.includes(token)) out = out.split(token).join(`${it.name} (${it.detail})`);
+  }
+  return out;
+}
 
 /**
  * 把提示词里的 @角色名 展开为 "角色名 (外观描述)"，做服装/外观锚定。
@@ -29,4 +44,18 @@ export function expandCharacterRefsFromStore(prompt: string): string {
     appearance: c.appearance,
   }));
   return expandCharacterRefs(prompt, characters);
+}
+
+/** 同时展开 @角色名 和 @场景名（角色优先，再场景）——生成前最后一刻统一调用 */
+export function expandAllRefsFromStore(prompt: string): string {
+  if (!prompt.includes("@")) return prompt;
+  let out = expandRefs(
+    prompt,
+    listCharacters().map((c) => ({ name: c.name, detail: c.appearance }))
+  );
+  out = expandRefs(
+    out,
+    listScenes().map((s) => ({ name: s.name, detail: s.description }))
+  );
+  return out;
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateImageWithGptImage2 } from "@/app/lib/image/gpt-image-2";
 import {
-  expandCharacterRefsFromStore,
+  expandAllRefsFromStore,
   saveImageAsset,
 } from "@/app/lib/asset-library";
 import { getOpenAIApiKey } from "@/app/lib/openai-key";
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const count = Math.max(1, Math.min(4, Math.floor(body.count ?? 1)));
   const style = body.style?.trim();
 
-  const expanded = expandCharacterRefsFromStore(raw);
+  const expanded = expandAllRefsFromStore(raw);
   const prompt = [
     expanded,
     style ? `Overall style: ${style}.` : "",

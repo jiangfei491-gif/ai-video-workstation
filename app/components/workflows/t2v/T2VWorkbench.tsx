@@ -11,6 +11,7 @@ import VideoPreviewPanel from "@/app/components/workflows/shared/VideoPreviewPan
 import WorkbenchSection from "@/app/components/workflows/shared/WorkbenchSection";
 import BatchGeneratePanel from "@/app/components/workflows/t2v/BatchGeneratePanel";
 import ProjectCharactersPanel from "@/app/components/workflows/t2v/ProjectCharactersPanel";
+import ProjectScenesPanel from "@/app/components/workflows/t2v/ProjectScenesPanel";
 import StoryboardPanel from "@/app/components/workflows/t2v/StoryboardPanel";
 import VideoSettingsPanel from "@/app/components/workflows/t2v/VideoSettingsPanel";
 import { resolveRequestSeed } from "@/app/lib/generation-params";
@@ -63,6 +64,11 @@ function reorderArray<T>(items: T[], from: number, to: number): T[] {
 export default function T2VWorkbench() {
   const { state, patch } = useT2VWorkbenchStore();
   const [confirmDeleteExport, setConfirmDeleteExport] = useState(false);
+  // 首帧草稿（图片，走 OpenAI，与 Veo 无关）
+  const [draftsByShot, setDraftsByShot] = useState<Record<number, { url: string; assetId: string }[]>>({});
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftErr, setDraftErr] = useState<string | null>(null);
+  const [draftPreview, setDraftPreview] = useState<string | null>(null);
 
   const {
     topic,
@@ -435,6 +441,34 @@ export default function T2VWorkbench() {
     });
   }
 
+  // 首帧草稿：一次生成 3 张候选，挑一张「替换并锁定」为该镜头首帧（之后出视频走 i2v）
+  async function generateDrafts() {
+    if (!activePrompt || draftLoading) return;
+    setDraftLoading(true);
+    setDraftErr(null);
+    try {
+      const res = await fetch("/api/director/shot-frame", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: activePrompt.providerPrompt, count: 3, style: state.projectStyle }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "草稿生成失败");
+      setDraftsByShot((d) => ({ ...d, [activeShotIdx]: data.frames ?? [] }));
+    } catch (e) {
+      setDraftErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDraftLoading(false);
+    }
+  }
+
+  function adoptDraft(frame: { url: string; assetId: string }) {
+    patch({
+      shotFrames: { ...getT2VState().shotFrames, [activeShotIdx]: frame.url },
+      shotFrameAssets: { ...getT2VState().shotFrameAssets, [activeShotIdx]: frame.assetId },
+    });
+  }
+
   async function syncExportHistory(meta: ReturnType<typeof getT2VState>["export"]) {
     if (historyEntryId) {
       patchVideoHistoryExport(historyEntryId, meta);
@@ -587,7 +621,14 @@ export default function T2VWorkbench() {
               />
             </WorkbenchSection>
 
-            <WorkbenchSection title="3. 项目设定">
+            <WorkbenchSection title="3. 本项目场景">
+              <ProjectScenesPanel
+                sceneIds={state.sceneIds}
+                onChange={(ids) => patch({ sceneIds: ids })}
+              />
+            </WorkbenchSection>
+
+            <WorkbenchSection title="4. 项目设定">
               <VideoSettingsPanel state={state} patch={patch} disabled={directorLoading || veoLoading} />
             </WorkbenchSection>
 
@@ -717,6 +758,58 @@ export default function T2VWorkbench() {
                       />
                     </div>
                   )}
+                  {/* 首帧草稿：先定首帧，出视频更稳（角色/场景一致） */}
+                  <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--bg-inset)] p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        首帧草稿
+                        {state.shotFrameAssets?.[activeShotIdx] && (
+                          <span className="ml-2 text-xs font-medium text-[var(--accent)]">已锁定首帧 · 出视频走图生视频</span>
+                        )}
+                      </p>
+                      <LoadingButton
+                        variant="secondary"
+                        loading={draftLoading}
+                        loadingText="生成草稿中…约1分钟"
+                        disabled={draftLoading}
+                        onClick={generateDrafts}
+                      >
+                        {draftsByShot[activeShotIdx]?.length ? "重新生成草稿" : "生成 3 个首帧草稿"}
+                      </LoadingButton>
+                    </div>
+                    {draftErr && <p className="mt-2 text-xs font-medium text-[var(--danger)]">{draftErr}</p>}
+                    {draftsByShot[activeShotIdx]?.length ? (
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {draftsByShot[activeShotIdx].map((f, di) => {
+                          const adopted = state.shotFrames?.[activeShotIdx] === f.url;
+                          return (
+                            <div key={di} className={`overflow-hidden rounded-lg border ${adopted ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)]"}`}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={f.url}
+                                alt={`草稿${di + 1}`}
+                                onClick={() => setDraftPreview(f.url)}
+                                className="aspect-[9/16] w-full cursor-zoom-in object-cover"
+                                title="点击看大图"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => adoptDraft(f)}
+                                className={`w-full py-1.5 text-xs font-medium ${adopted ? "bg-[var(--accent)] text-white" : "text-[var(--accent)] hover:bg-[var(--accent-soft)]"}`}
+                              >
+                                {adopted ? "✓ 已选用" : "用此首帧"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-[var(--text-caption)]">
+                        可选：先生成 3 张首帧候选，挑一张锁定，再出视频会以它为参考保持一致（不锁也能直接出视频）。
+                      </p>
+                    )}
+                  </div>
+
                   {mode === "test" || isPreview ? (
                     <div className="mb-4 flex flex-wrap gap-2">
                       <LoadingButton loading={veoLoading} loadingText="生成中…" disabled={veoLoading} onClick={runVeoTest}>
@@ -762,6 +855,16 @@ export default function T2VWorkbench() {
 
         {error && veoStatus !== "failed" && (
           <p className="mt-4 text-sm font-semibold text-[var(--danger)]">{error}</p>
+        )}
+
+        {draftPreview && (
+          <div
+            onClick={() => setDraftPreview(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={draftPreview} alt="首帧草稿" className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" />
+          </div>
         )}
       </div>
     </div>

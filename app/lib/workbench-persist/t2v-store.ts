@@ -35,6 +35,7 @@ const defaultState: T2VWorkbenchState = {
   mode: "test",
   director: null,
   characterIds: [],
+  sceneIds: [],
   canvasPositions: {},
   canvasLinks: [],
   shotFrames: {},

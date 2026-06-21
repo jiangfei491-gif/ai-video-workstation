@@ -46,3 +46,18 @@ export type CharacterAsset = {
   refImagePath?: string;
   createdAt: string;
 };
+
+/**
+ * 场景档案 —— 与角色对应的"地点/环境"一致性系统。
+ * 提示词里写 @场景名，生成前替换为 场景名 (环境描述)，统一全片场景调性。
+ */
+export type SceneAsset = {
+  id: string;
+  /** @引用用的名字，如 客厅 / 雨夜街道 */
+  name: string;
+  /** 注入提示词的环境描述（英文，地点/光线/氛围锚点） */
+  description: string;
+  refImageUrl?: string;
+  refImagePath?: string;
+  createdAt: string;
+};

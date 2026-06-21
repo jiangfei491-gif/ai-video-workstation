@@ -3,6 +3,7 @@ export type {
   FirstFrameAsset,
   VideoClipAsset,
   CharacterAsset,
+  SceneAsset,
 } from "./types";
 export {
   listImageAssets,
@@ -19,5 +20,16 @@ export {
   updateCharacterImage,
   deleteCharacter,
 } from "./character-store";
-export { expandCharacterRefs, expandCharacterRefsFromStore } from "./expand-refs";
+export {
+  listScenes,
+  getScene,
+  createScene,
+  updateSceneImage,
+  deleteScene,
+} from "./scene-store";
+export {
+  expandCharacterRefs,
+  expandCharacterRefsFromStore,
+  expandAllRefsFromStore,
+} from "./expand-refs";
 export { extractCharacterAppearance } from "./extract-appearance";
