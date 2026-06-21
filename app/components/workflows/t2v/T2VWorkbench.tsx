@@ -32,12 +32,26 @@ import type {
   BatchShotState,
   DirectorShot,
   StoryboardShot,
+  VeoTestResult,
 } from "@/app/lib/workbench-persist/types";
 
 /** 批量并行时的并发上限，避免一次性打满 API 触发限流 */
 const BATCH_CONCURRENCY = 3;
 
 const VEO_MODEL = "veo-3.1-generate-preview";
+
+function batchShotToTestResult(shot: BatchShotState | undefined): VeoTestResult | null {
+  if (!shot || shot.status !== "success" || !shot.videoUrl || !shot.taskId) {
+    return null;
+  }
+  return {
+    taskId: shot.taskId,
+    videoUrl: shot.videoUrl,
+    seed: shot.seed ?? 0,
+    firstFrameAssetId: shot.firstFrameAssetId,
+    firstFrameUrl: shot.firstFrameUrl,
+  };
+}
 
 function reorderArray<T>(items: T[], from: number, to: number): T[] {
   const next = [...items];
@@ -74,9 +88,15 @@ export default function T2VWorkbench() {
 
   const isPreview = workspaceMode === "preview";
   const activePrompt = director?.prompts[activeShotIdx];
+  const activeBatchShot = batchResults[activeShotIdx];
+  const restoredBatchResult = batchShotToTestResult(activeBatchShot);
+  const effectiveTestResult = testResult ?? restoredBatchResult;
   const shotId = activePrompt ? `t2v-shot-${activeShotIdx + 1}` : "";
   const veoDurationSec = normalizeVeoDurationSec(state.shotDurationSec);
-  const previewUrl = prodResult ?? testResult?.videoUrl ?? null;
+  const previewUrl =
+    prodResult ??
+    effectiveTestResult?.videoUrl ??
+    null;
 
   useEffect(() => {
     if (director && (testResult || prodResult)) {
@@ -180,18 +200,27 @@ export default function T2VWorkbench() {
         patch({ veoProgressStep: 3 });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "视频预览失败");
+        const nextTestResult: VeoTestResult = {
+          taskId: data.taskId,
+          videoUrl: data.videoUrl,
+          seed: data.seed,
+          firstFrameAssetId: data.firstFrameAssetId,
+          firstFrameUrl: data.firstFrameUrl,
+        };
         patch({
-          testResult: {
-            taskId: data.taskId,
-            videoUrl: data.videoUrl,
-            seed: data.seed,
-            firstFrameAssetId: data.firstFrameAssetId,
-            firstFrameUrl: data.firstFrameUrl,
-          },
+          testResult: nextTestResult,
           shotLock: null,
           veoStatus: "success",
           veoSuccessMessage: "视频生成完成",
           veoError: null,
+        });
+        patchBatchShot(activeShotIdx, {
+          status: "success",
+          videoUrl: data.videoUrl,
+          taskId: data.taskId,
+          seed: data.seed,
+          firstFrameAssetId: data.firstFrameAssetId,
+          firstFrameUrl: data.firstFrameUrl,
         });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -204,20 +233,22 @@ export default function T2VWorkbench() {
   }
 
   async function lockShot() {
-    if (!testResult || !activePrompt) return;
+    if (!effectiveTestResult || !activePrompt) return;
     patch({ veoLoading: true, error: null });
     try {
+      const imageAssetId = getT2VState().shotFrameAssets?.[activeShotIdx];
       const input = {
         shotId,
         prompt: activePrompt.providerPrompt,
-        seed: testResult.seed,
-        firstFrameAssetId: testResult.firstFrameAssetId ?? "preview",
-        firstFrameUrl: testResult.firstFrameUrl ?? testResult.videoUrl ?? "",
+        seed: effectiveTestResult.seed,
+        firstFrameAssetId: effectiveTestResult.firstFrameAssetId ?? "preview",
+        firstFrameUrl: effectiveTestResult.firstFrameUrl ?? effectiveTestResult.videoUrl ?? "",
         duration: veoDurationSec,
         aspectRatio: state.aspectRatio,
         model: VEO_MODEL,
-        testTaskId: testResult.taskId,
-        testClipUrl: testResult.videoUrl ?? "",
+        testTaskId: effectiveTestResult.taskId,
+        testClipUrl: effectiveTestResult.videoUrl ?? "",
+        imageAssetId,
       };
       if (isPreview) {
         patch({
@@ -256,7 +287,8 @@ export default function T2VWorkbench() {
           shotId,
           workspaceMode,
           mode: "production",
-          type: "t2v",
+          type: shotLock.snapshot.imageAssetId ? "i2v" : "t2v",
+          imageAssetId: shotLock.snapshot.imageAssetId,
           prompt: activePrompt.providerPrompt,
           seed: shotLock.snapshot.seed,
           model: shotLock.snapshot.model,
@@ -290,15 +322,16 @@ export default function T2VWorkbench() {
   }
 
   function selectShot(i: number) {
+    const restoredTest = batchShotToTestResult(batchResults[i]);
     patch({
       activeShotIdx: i,
-      testResult: null,
+      testResult: restoredTest,
       shotLock: null,
       prodResult: null,
       mode: "test",
-      veoStatus: "idle",
+      veoStatus: restoredTest ? "success" : "idle",
       veoError: null,
-      veoSuccessMessage: null,
+      veoSuccessMessage: restoredTest ? "已切换到该镜头的预览结果" : null,
     });
   }
 
@@ -336,6 +369,8 @@ export default function T2VWorkbench() {
         videoUrl: data.videoUrl,
         taskId: data.taskId,
         seed: data.seed,
+        firstFrameAssetId: data.firstFrameAssetId,
+        firstFrameUrl: data.firstFrameUrl,
       });
     } catch (e) {
       patchBatchShot(index, {
@@ -491,136 +526,223 @@ export default function T2VWorkbench() {
             : exportMeta.exportStatus === "failed"
               ? ("failed" as const)
               : ("pending" as const),
-    },
+      },
   ];
+
+  const activeStoryboard = director?.storyboard[activeShotIdx];
+  const completedBatchCount = Object.values(batchResults).filter(
+    (shot) => shot.status === "success"
+  ).length;
+  const failedBatchCount = Object.values(batchResults).filter(
+    (shot) => shot.status === "failed"
+  ).length;
+  const activeShotLabel = director
+    ? `镜头 ${activeShotIdx + 1} / ${director.prompts.length}`
+    : "等待编导生成分镜";
+  const hasActiveFrame = Boolean(state.shotFrames?.[activeShotIdx]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="shrink-0 border-b border-[var(--border)] px-6 py-4">
         <h1 className="workbench-page-title">视频创作</h1>
         <p className="workbench-page-desc mt-1">
-          文生视频 · 主题 → 编导 → 剧本 → 分镜 → 视频生成 → 配音 → 字幕 → 设置 → 导出
+          文生视频 · 项目设定 → 编导分镜 → 单镜生成/锁定 → 导出
         </p>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
         <TaskStatusBar steps={pipelineSteps} />
 
-        <WorkbenchSection title="主题">
-          <input
-            className="input-field w-full rounded-lg px-3 py-2.5 text-sm"
-            value={topic}
-            onChange={(e) => patch({ topic: e.target.value })}
-            placeholder="输入视频主题"
-          />
-          <div className="mt-3">
-            <LoadingButton loading={directorLoading} loadingText="编导运行中…" disabled={!topic.trim() || directorLoading} onClick={runDirector}>
-              运行编导
-            </LoadingButton>
+        <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.92fr)_minmax(560px,1.45fr)]">
+          <div className="min-w-0">
+            <WorkbenchSection title="1. 项目起步">
+              <label className="workbench-label mb-2 block">视频主题</label>
+              <textarea
+                className="input-field min-h-[96px] w-full rounded-lg px-3 py-2.5 text-sm leading-relaxed"
+                value={topic}
+                onChange={(e) => patch({ topic: e.target.value })}
+                placeholder="写清楚题材、人物、情绪和目标受众；例如：一个创业者深夜用 AI 做完一支广告片"
+              />
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <LoadingButton
+                  loading={directorLoading}
+                  loadingText="编导运行中…"
+                  disabled={!topic.trim() || directorLoading}
+                  onClick={runDirector}
+                >
+                  {director ? "重新运行编导" : "运行编导"}
+                </LoadingButton>
+                {director && (
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">
+                    已生成 {director.prompts.length} 个镜头
+                  </span>
+                )}
+              </div>
+            </WorkbenchSection>
+
+            <WorkbenchSection title="2. 项目设定">
+              <VideoSettingsPanel state={state} patch={patch} disabled={directorLoading || veoLoading} />
+            </WorkbenchSection>
+
+            <WorkbenchSection title="3. 本项目角色">
+              <ProjectCharactersPanel
+                characterIds={state.characterIds}
+                onChange={(ids) => patch({ characterIds: ids })}
+              />
+            </WorkbenchSection>
+
+            {director && (
+              <WorkbenchSection title="剧本 / 声音">
+                <h3 className="workbench-heading mb-2">{director.title}</h3>
+                <p className="workbench-body max-h-56 overflow-y-auto whitespace-pre-wrap rounded-lg border border-[var(--border)] bg-[var(--bg-inset)] p-3 leading-relaxed">
+                  {director.script}
+                </p>
+                <div className="mt-4 grid gap-3">
+                  <div>
+                    <label className="workbench-label mb-1.5 block">配音文案</label>
+                    <textarea
+                      className="input-field min-h-[80px] w-full rounded-lg px-3 py-2.5 text-sm"
+                      value={state.voiceoverText}
+                      onChange={(e) => patch({ voiceoverText: e.target.value })}
+                      placeholder="配音文案"
+                    />
+                  </div>
+                  <div>
+                    <label className="workbench-label mb-1.5 block">字幕内容</label>
+                    <textarea
+                      className="input-field min-h-[80px] w-full rounded-lg px-3 py-2.5 text-sm"
+                      value={state.subtitleText}
+                      onChange={(e) => patch({ subtitleText: e.target.value })}
+                      placeholder="字幕内容"
+                    />
+                  </div>
+                </div>
+              </WorkbenchSection>
+            )}
+
+            <ExportPanel
+              workbench="t2v"
+              exportMeta={exportMeta}
+              canExportProject={!!director}
+              canExportMedia={!!previewUrl}
+              onExportProject={handleExportProject}
+              onExportMedia={handleExportVideo}
+              onDeleteRecord={() => setConfirmDeleteExport(true)}
+            />
           </div>
-        </WorkbenchSection>
 
-        <WorkbenchSection title="本项目角色">
-          <ProjectCharactersPanel
-            characterIds={state.characterIds}
-            onChange={(ids) => patch({ characterIds: ids })}
-          />
-        </WorkbenchSection>
+          <div className="min-w-0 xl:sticky xl:top-0 xl:self-start">
+            {!director ? (
+              <section className="glass-panel rounded-xl p-5">
+                <h2 className="workbench-section-title mb-3">镜头生产台</h2>
+                <div className="grid gap-3 text-sm text-[var(--text-secondary)]">
+                  <p>先在左侧写主题、设定镜头数量和工作模式，然后运行编导。</p>
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-inset)] p-3">
+                    <p className="font-semibold text-[var(--text-primary)]">推荐顺序</p>
+                    <p className="mt-1 leading-relaxed">
+                      主题 → 项目设定 → 导入角色 → 运行编导 → 改镜头 Prompt → 生成预览 → 锁定 → 正式生成
+                    </p>
+                  </div>
+                </div>
+              </section>
+            ) : (
+              <>
+                <section className="glass-panel mb-4 rounded-xl p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="workbench-caption">当前处理</p>
+                      <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                        {activeShotLabel}
+                      </h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs font-medium">
+                      <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[var(--accent)]">
+                        {veoDurationSec}s Veo
+                      </span>
+                      <span className="rounded-full bg-[var(--bg-inset)] px-2.5 py-1 text-[var(--text-secondary)]">
+                        {hasActiveFrame ? "有首帧" : "无首帧"}
+                      </span>
+                      <span className="rounded-full bg-[var(--bg-inset)] px-2.5 py-1 text-[var(--text-secondary)]">
+                        批量 {completedBatchCount}/{director.prompts.length}
+                        {failedBatchCount ? ` · 失败 ${failedBatchCount}` : ""}
+                      </span>
+                    </div>
+                  </div>
+                  {activeStoryboard && (
+                    <div className="mt-3 grid gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-inset)] p-3 text-sm text-[var(--text-secondary)]">
+                      <p>
+                        <span className="font-semibold text-[var(--text-primary)]">角色：</span>
+                        {activeStoryboard.character}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-[var(--text-primary)]">动作：</span>
+                        {activeStoryboard.action}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-[var(--text-primary)]">场景：</span>
+                        {activeStoryboard.environment}
+                      </p>
+                    </div>
+                  )}
+                </section>
 
-        {director && (
-          <>
-            <WorkbenchSection title="剧本">
-              <h3 className="workbench-heading mb-2">{director.title}</h3>
-              <p className="workbench-body whitespace-pre-wrap leading-relaxed">{director.script}</p>
-            </WorkbenchSection>
+                <WorkbenchSection title="4. 分镜与提示词">
+                  <StoryboardPanel
+                    director={director}
+                    activeShotIdx={activeShotIdx}
+                    onSelectShot={selectShot}
+                    onReorder={reorderShots}
+                    onUpdatePrompt={updatePrompt}
+                  />
+                </WorkbenchSection>
 
-            <WorkbenchSection title="分镜">
-              <StoryboardPanel
-                director={director}
-                activeShotIdx={activeShotIdx}
-                onSelectShot={selectShot}
-                onReorder={reorderShots}
-                onUpdatePrompt={updatePrompt}
-              />
-            </WorkbenchSection>
-
-            <WorkbenchSection title="批量生成">
-              <BatchGeneratePanel
-                director={director}
-                batchRunning={batchRunning}
-                batchResults={batchResults}
-                onRunBatch={runBatch}
-                onRetryShot={retryShot}
-                onSelectShot={selectShot}
-              />
-            </WorkbenchSection>
-
-            <WorkbenchSection title="视频预览 / 正式">
-              {!isPreview && (
                 <div className="mb-4">
-                  <GenerationModeToggle
-                    mode={mode}
-                    onChange={(m: GenerationMode) => patch({ mode: m })}
-                    productionDisabled={!shotLock}
+                  <BatchGeneratePanel
+                    director={director}
+                    batchRunning={batchRunning}
+                    batchResults={batchResults}
+                    onRunBatch={runBatch}
+                    onRetryShot={retryShot}
+                    onSelectShot={selectShot}
                   />
                 </div>
-              )}
-              {mode === "test" || isPreview ? (
-                <div className="mb-4 flex flex-wrap gap-2">
-                  <LoadingButton loading={veoLoading} loadingText="生成中…" disabled={veoLoading} onClick={runVeoTest}>
-                    {veoDurationSec} 秒预览
-                  </LoadingButton>
+
+                <WorkbenchSection title="5. 当前镜头生成 / 验收">
                   {!isPreview && (
-                    <LoadingButton variant="secondary" disabled={veoLoading || !testResult} onClick={lockShot}>
-                      确认并锁定
-                    </LoadingButton>
+                    <div className="mb-4">
+                      <GenerationModeToggle
+                        mode={mode}
+                        onChange={(m: GenerationMode) => patch({ mode: m })}
+                        productionDisabled={!shotLock}
+                      />
+                    </div>
                   )}
-                </div>
-              ) : (
-                <div className="mb-4">
-                  <LoadingButton loading={veoLoading} loadingText="正式生成中…" disabled={veoLoading || !shotLock} onClick={runVeoProduction}>
-                    正式生成（{veoDurationSec} 秒）
-                  </LoadingButton>
-                </div>
-              )}
-              <VeoProgressPanel status={veoStatus} step={veoProgressStep} error={veoError} successMessage={veoSuccessMessage} />
-              <VideoPreviewPanel status={veoStatus} videoUrl={previewUrl} error={veoError} />
-              {!isPreview && <ShotLockPanel lock={shotLock} onUnlock={unlockShot} />}
-            </WorkbenchSection>
-          </>
-        )}
-
-        <WorkbenchSection title="配音">
-          <textarea
-            className="input-field min-h-[80px] w-full rounded-lg px-3 py-2.5 text-sm"
-            value={state.voiceoverText}
-            onChange={(e) => patch({ voiceoverText: e.target.value })}
-            placeholder="配音文案"
-          />
-        </WorkbenchSection>
-
-        <WorkbenchSection title="字幕">
-          <textarea
-            className="input-field min-h-[80px] w-full rounded-lg px-3 py-2.5 text-sm"
-            value={state.subtitleText}
-            onChange={(e) => patch({ subtitleText: e.target.value })}
-            placeholder="字幕内容"
-          />
-        </WorkbenchSection>
-
-        <WorkbenchSection title="视频设置">
-          <VideoSettingsPanel state={state} patch={patch} disabled={directorLoading || veoLoading} />
-        </WorkbenchSection>
-
-        <ExportPanel
-          workbench="t2v"
-          exportMeta={exportMeta}
-          canExportProject={!!director}
-          canExportMedia={!!previewUrl}
-          onExportProject={handleExportProject}
-          onExportMedia={handleExportVideo}
-          onDeleteRecord={() => setConfirmDeleteExport(true)}
-        />
+                  {mode === "test" || isPreview ? (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      <LoadingButton loading={veoLoading} loadingText="生成中…" disabled={veoLoading} onClick={runVeoTest}>
+                        {previewUrl ? "重新生成预览" : `${veoDurationSec} 秒预览`}
+                      </LoadingButton>
+                      {!isPreview && (
+                        <LoadingButton variant="secondary" disabled={veoLoading || !effectiveTestResult} onClick={lockShot}>
+                          确认并锁定
+                        </LoadingButton>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mb-4">
+                      <LoadingButton loading={veoLoading} loadingText="正式生成中…" disabled={veoLoading || !shotLock} onClick={runVeoProduction}>
+                        正式生成（{veoDurationSec} 秒）
+                      </LoadingButton>
+                    </div>
+                  )}
+                  <VeoProgressPanel status={veoStatus} step={veoProgressStep} error={veoError} successMessage={veoSuccessMessage} />
+                  <VideoPreviewPanel status={veoStatus} videoUrl={previewUrl} error={veoError} />
+                  {!isPreview && <ShotLockPanel lock={shotLock} onUnlock={unlockShot} />}
+                </WorkbenchSection>
+              </>
+            )}
+          </div>
+        </div>
 
         {confirmDeleteExport && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

@@ -21,6 +21,8 @@ export type BatchShotState = {
   videoUrl: string | null;
   taskId?: string;
   seed?: number;
+  firstFrameAssetId?: string;
+  firstFrameUrl?: string;
   error?: string;
 };
 
