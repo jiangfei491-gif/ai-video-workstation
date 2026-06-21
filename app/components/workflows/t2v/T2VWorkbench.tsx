@@ -12,6 +12,7 @@ import WorkbenchSection from "@/app/components/workflows/shared/WorkbenchSection
 import BatchGeneratePanel from "@/app/components/workflows/t2v/BatchGeneratePanel";
 import ProjectCharactersPanel from "@/app/components/workflows/t2v/ProjectCharactersPanel";
 import ProjectScenesPanel from "@/app/components/workflows/t2v/ProjectScenesPanel";
+import ProjectTemplateStrip from "@/app/components/workflows/t2v/ProjectTemplateStrip";
 import StoryboardPanel from "@/app/components/workflows/t2v/StoryboardPanel";
 import VideoSettingsPanel from "@/app/components/workflows/t2v/VideoSettingsPanel";
 import { resolveRequestSeed } from "@/app/lib/generation-params";
@@ -660,16 +661,6 @@ export default function T2VWorkbench() {
                 </div>
               </WorkbenchSection>
             )}
-
-            <ExportPanel
-              workbench="t2v"
-              exportMeta={exportMeta}
-              canExportProject={!!director}
-              canExportMedia={!!previewUrl}
-              onExportProject={handleExportProject}
-              onExportMedia={handleExportVideo}
-              onDeleteRecord={() => setConfirmDeleteExport(true)}
-            />
           </div>
 
           <div className="min-w-0 xl:sticky xl:top-0 xl:self-start">
@@ -725,6 +716,26 @@ export default function T2VWorkbench() {
                       </p>
                     </div>
                   )}
+
+                  {/* 角色模板 + 场景模板预览窗（就在当前处理里，对照着用） */}
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <ProjectTemplateStrip
+                      title="角色模板"
+                      ids={state.characterIds}
+                      apiPath="/api/characters"
+                      listKey="characters"
+                      detailKey="appearance"
+                      icon="user"
+                    />
+                    <ProjectTemplateStrip
+                      title="场景模板"
+                      ids={state.sceneIds}
+                      apiPath="/api/scenes"
+                      listKey="scenes"
+                      detailKey="description"
+                      icon="scene"
+                    />
+                  </div>
                 </section>
 
                 <WorkbenchSection title="4. 分镜与提示词">
@@ -835,6 +846,19 @@ export default function T2VWorkbench() {
               </>
             )}
           </div>
+        </div>
+
+        {/* 底部横跨整宽：导出（左右两栏在此齐平收口） */}
+        <div className="mt-5">
+          <ExportPanel
+            workbench="t2v"
+            exportMeta={exportMeta}
+            canExportProject={!!director}
+            canExportMedia={!!previewUrl}
+            onExportProject={handleExportProject}
+            onExportMedia={handleExportVideo}
+            onDeleteRecord={() => setConfirmDeleteExport(true)}
+          />
         </div>
 
         {confirmDeleteExport && (

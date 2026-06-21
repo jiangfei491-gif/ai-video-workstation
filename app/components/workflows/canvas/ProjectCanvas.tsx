@@ -89,6 +89,12 @@ export default function ProjectCanvas() {
     selectedRef.current = selected;
   });
 
+  // 仓库位置变化时（含刷新后读出存档、跨标签同步）同步回本地，
+  // 修复"首次渲染时仓库未水合 → 本地为空 → 刷新丢失已摆放位置"
+  useEffect(() => {
+    setPositions(state.canvasPositions);
+  }, [state.canvasPositions]);
+
   const importedChars = chars.filter((c) => characterIds.includes(c.id));
   const shots = director?.prompts ?? [];
 

@@ -9,7 +9,7 @@ type Props = {
   error?: string | null;
 };
 
-const PLACEHOLDER_MIN_H = "min-h-[280px]";
+const PLACEHOLDER_MIN_H = "min-h-[440px]";
 
 export default function VideoPreviewPanel({ status, videoUrl, error }: Props) {
   return (
@@ -22,7 +22,7 @@ export default function VideoPreviewPanel({ status, videoUrl, error }: Props) {
 
       <div className="flex min-h-0 flex-1 items-center justify-center p-4">
         {status === "success" && videoUrl ? (
-          <video src={videoUrl} controls className="max-h-64 w-full rounded-lg bg-black" />
+          <video src={videoUrl} controls className="max-h-[420px] w-full rounded-lg bg-black" />
         ) : status === "generating" ? (
           <div className="flex w-full max-w-sm flex-col items-center gap-3 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent-soft)]">
