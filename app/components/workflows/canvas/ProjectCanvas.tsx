@@ -10,6 +10,7 @@ import {
   FiLoader,
   FiPlus,
   FiTrash2,
+  FiX,
 } from "react-icons/fi";
 import { useT2VWorkbenchStore } from "@/app/lib/workbench-persist/t2v-store";
 import { fileToScaledDataUrl } from "@/app/lib/image-client";
@@ -23,12 +24,12 @@ type Character = {
   createdAt: string;
 };
 
-const SHOT_W = 280;
-const SHOT_H = 300;
-const CHAR_W = 220;
-const CHAR_H = 290;
-const REF_W = 220;
-const REF_H = 220;
+const SHOT_W = 320;
+const SHOT_H = 340;
+const CHAR_W = 250;
+const CHAR_H = 320;
+const REF_W = 240;
+const REF_H = 240;
 const GAP = 48;
 const MM_W = 168;
 const MM_H = 112;
@@ -65,6 +66,7 @@ export default function ProjectCanvas() {
   const [variants, setVariants] = useState<Record<number, { url: string; assetId: string }[]>>({});
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [styleOpen, setStyleOpen] = useState(false);
+  const [framePreview, setFramePreview] = useState<string | null>(null);
   const [sectionLive, setSectionLive] = useState<{ id: string; x: number; y: number } | null>(null);
   const sectionDragRef = useRef<{ id: string; sm: { x: number; y: number }; sp: { x: number; y: number } } | null>(null);
 
@@ -576,7 +578,15 @@ export default function ProjectCanvas() {
           backgroundPosition: `${pan.x}px ${pan.y}px`,
         }}
       >
-        <div className="absolute left-0 top-0 origin-top-left" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }} data-bg>
+        <div
+          className="absolute origin-top-left"
+          style={
+            zoom === 1
+              ? { left: Math.round(pan.x), top: Math.round(pan.y) }
+              : { left: 0, top: 0, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }
+          }
+          data-bg
+        >
           {/* 分区（视觉编组，置于卡片之下） */}
           {state.canvasSections.map((s) => {
             const live = sectionLive?.id === s.id ? sectionLive : null;
@@ -625,7 +635,7 @@ export default function ProjectCanvas() {
                 className={`group absolute cursor-grab rounded-xl border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)]"}`}
                 style={{ left: p.x, top: p.y, width: CHAR_W, height: CHAR_H }}
               >
-                <div className="flex h-[190px] w-full items-center justify-center overflow-hidden rounded-t-xl bg-black/30">
+                <div className="flex h-[210px] w-full items-center justify-center overflow-hidden rounded-t-xl bg-black/30">
                   {c.refImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.refImageUrl} alt={c.name} className="h-full w-full object-cover" draggable={false} />
@@ -634,8 +644,8 @@ export default function ProjectCanvas() {
                   )}
                 </div>
                 <div className="px-3 py-2">
-                  <span className="font-mono text-sm font-semibold text-[var(--accent)]">@{c.name}</span>
-                  <p className="line-clamp-2 text-xs leading-snug text-[var(--text-caption)]">{c.appearance}</p>
+                  <span className="font-mono text-base font-semibold text-[var(--accent)]">@{c.name}</span>
+                  <p className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)]">{c.appearance}</p>
                 </div>
                 <div
                   onMouseDown={(e) => startLink(e, key)}
@@ -669,28 +679,36 @@ export default function ProjectCanvas() {
                   title="拖到另一张卡连线（角色→分镜=选角）"
                   className={`absolute -right-2.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[var(--accent)] shadow transition-opacity ${linking ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`}
                 />
-                <div className="flex items-center justify-between rounded-t-xl bg-[var(--bg-inset)] px-3 py-1.5">
-                  <span className="text-sm font-semibold text-[var(--text-primary)]">镜头 {i + 1}</span>
-                  <span className="text-xs text-[var(--text-caption)]">{shot.duration}s</span>
+                <div className="flex items-center justify-between rounded-t-xl bg-[var(--bg-inset)] px-3 py-2">
+                  <span className="text-base font-bold text-[var(--text-primary)]">镜头 {i + 1}</span>
+                  <span className="text-sm font-medium text-[var(--text-secondary)]">{shot.duration}s</span>
                 </div>
 
                 {/* 画面预览区（始终存在） */}
-                <div className="relative h-[160px] w-full bg-black/30">
+                <div className="relative h-[190px] w-full bg-black/30">
                   {frameImg ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={frameImg} alt={`镜头${i + 1}`} className="h-full w-full object-cover" draggable={false} />
+                    <img
+                      src={frameImg}
+                      alt={`镜头${i + 1}`}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => setFramePreview(frameImg)}
+                      className="h-full w-full cursor-zoom-in object-cover"
+                      draggable={false}
+                      title="点击查看大图"
+                    />
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center gap-2">
-                      <span className="text-xs text-[var(--text-caption)]">未生成画面</span>
+                      <span className="text-sm font-medium text-[var(--text-secondary)]">未生成画面</span>
                       <button
                         type="button"
                         onMouseDown={(e) => e.stopPropagation()}
                         onClick={() => generateFrame(i)}
                         disabled={busy}
-                        className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                        className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
                       >
                         {busy ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiImage className="h-3.5 w-3.5" />}
-                        {busy ? "生成中…" : "生成画面"}
+                        {busy ? "生成中…约1分钟" : "生成画面"}
                       </button>
                     </div>
                   )}
@@ -727,7 +745,7 @@ export default function ProjectCanvas() {
                   </div>
                 </div>
 
-                <p title={shot.providerPrompt} className="line-clamp-3 px-3 py-2 text-[13px] leading-snug text-[var(--text-secondary)]">
+                <p title={shot.providerPrompt} className="line-clamp-3 px-3 py-2 text-[15px] font-semibold leading-relaxed text-[var(--text-primary)]">
                   {zhSummary}
                 </p>
                 {frameErr[i] && <p className="px-3 pb-1 text-[11px] leading-tight text-[var(--danger)] line-clamp-2">{frameErr[i]}</p>}
@@ -845,6 +863,20 @@ export default function ProjectCanvas() {
         </>
       )}
       <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={(e) => addReference(e.target.files?.[0])} />
+
+      {/* 首帧大图预览 */}
+      {framePreview && (
+        <div
+          onClick={() => setFramePreview(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={framePreview} alt="镜头首帧" className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" />
+          <button type="button" className="absolute right-6 top-6 rounded-full bg-black/60 p-2 text-white" onClick={() => setFramePreview(null)} title="关闭">
+            <FiX className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
       {/* 小地图 */}
       {hasContent && bounds && vpRect && (
