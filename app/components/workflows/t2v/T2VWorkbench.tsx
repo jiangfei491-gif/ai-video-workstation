@@ -580,15 +580,15 @@ export default function T2VWorkbench() {
               </div>
             </WorkbenchSection>
 
-            <WorkbenchSection title="2. 项目设定">
-              <VideoSettingsPanel state={state} patch={patch} disabled={directorLoading || veoLoading} />
-            </WorkbenchSection>
-
-            <WorkbenchSection title="3. 本项目角色">
+            <WorkbenchSection title="2. 本项目角色">
               <ProjectCharactersPanel
                 characterIds={state.characterIds}
                 onChange={(ids) => patch({ characterIds: ids })}
               />
+            </WorkbenchSection>
+
+            <WorkbenchSection title="3. 项目设定">
+              <VideoSettingsPanel state={state} patch={patch} disabled={directorLoading || veoLoading} />
             </WorkbenchSection>
 
             {director && (

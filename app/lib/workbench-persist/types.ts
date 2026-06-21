@@ -2,7 +2,6 @@ import type { GenerationMode } from "@/app/lib/generation-mode";
 import type { SeedMode } from "@/app/lib/generation-params";
 import type { ExportMeta } from "@/app/lib/export/types";
 import type { ShotLockRecord } from "@/app/lib/shot-lock";
-import type { ShotCount, ShotDurationSec } from "@/app/lib/shot-control/types";
 import type { WorkspaceMode } from "@/app/lib/workspace-mode";
 
 export type VeoJobStatus = "idle" | "generating" | "success" | "failed";
@@ -54,8 +53,8 @@ export type VideoFps = 24 | 30 | 60;
 
 export type T2VWorkbenchState = {
   topic: string;
-  shotCount: ShotCount;
-  shotDurationSec: ShotDurationSec;
+  shotCount: number;
+  shotDurationSec: number;
   fps: VideoFps;
   aspectRatio: "9:16" | "16:9";
   clarity: VideoClarity;

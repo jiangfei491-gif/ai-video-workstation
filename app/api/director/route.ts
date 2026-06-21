@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
   const shotCount =
     body.shotCount !== undefined
-      ? Math.max(1, Math.min(12, Math.floor(body.shotCount)))
+      ? Math.max(1, Math.min(30, Math.floor(body.shotCount)))
       : undefined;
 
   try {

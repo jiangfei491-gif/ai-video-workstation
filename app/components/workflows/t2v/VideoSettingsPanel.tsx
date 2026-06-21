@@ -25,7 +25,7 @@ export default function VideoSettingsPanel({ state, patch, disabled }: Props) {
     <div className="space-y-5">
       <div>
         <p className="workbench-label mb-2">镜头数量</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {SHOT_COUNT_OPTIONS.map((n) => (
             <button
               key={n}
@@ -37,12 +37,24 @@ export default function VideoSettingsPanel({ state, patch, disabled }: Props) {
               {n} 镜头
             </button>
           ))}
+          <span className="text-xs text-[var(--text-caption)]">或手动</span>
+          <input
+            type="number"
+            min={1}
+            max={30}
+            disabled={disabled}
+            value={state.shotCount}
+            onChange={(e) =>
+              patch({ shotCount: Math.max(1, Math.min(30, Math.floor(Number(e.target.value) || 1))) })
+            }
+            className="input-field w-20 rounded-lg px-2 py-1.5 text-sm"
+          />
         </div>
       </div>
 
       <div>
         <p className="workbench-label mb-2">单镜头时长</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {SHOT_DURATION_OPTIONS.map((n) => (
             <button
               key={n}
@@ -54,9 +66,22 @@ export default function VideoSettingsPanel({ state, patch, disabled }: Props) {
               {n} 秒
             </button>
           ))}
+          <span className="text-xs text-[var(--text-caption)]">或手动</span>
+          <input
+            type="number"
+            min={1}
+            max={60}
+            disabled={disabled}
+            value={state.shotDurationSec}
+            onChange={(e) =>
+              patch({ shotDurationSec: Math.max(1, Math.min(60, Math.floor(Number(e.target.value) || 1))) })
+            }
+            className="input-field w-20 rounded-lg px-2 py-1.5 text-sm"
+          />
+          <span className="text-xs text-[var(--text-caption)]">秒</span>
         </div>
         <p className="mt-2 text-xs text-[var(--text-secondary)]">
-          总时长 {state.shotCount} × {state.shotDurationSec} = {total} 秒 · 视频生成对齐 {veoSec} 秒
+          总时长 {state.shotCount} × {state.shotDurationSec} = {total} 秒 · 单镜生成对齐到 {veoSec} 秒（Veo 仅支持 4/6/8 秒）
         </p>
       </div>
 

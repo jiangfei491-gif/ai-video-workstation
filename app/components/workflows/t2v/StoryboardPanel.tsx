@@ -155,7 +155,7 @@ export default function StoryboardPanel({
               }`}
             >
               <FiSliders className="h-3.5 w-3.5" />
-              填空助手
+              高级模式
             </button>
             <button
               type="button"
@@ -165,7 +165,7 @@ export default function StoryboardPanel({
               }`}
             >
               <FiEdit3 className="h-3.5 w-3.5" />
-              直接编辑
+              修改提示词
             </button>
           </div>
         </div>
