@@ -12,6 +12,7 @@ import {
   FiFileText,
   FiFilm,
   FiCheckCircle,
+  FiCompass,
 } from "react-icons/fi";
 import { MATERIAL_CATEGORIES, type Material } from "@/app/lib/materials/types";
 import { setT2VState } from "@/app/lib/workbench-persist/t2v-store";
@@ -26,6 +27,7 @@ export default function MaterialCenter() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [batchBusy, setBatchBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -184,8 +186,11 @@ export default function MaterialCenter() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* 操作栏 */}
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-4 py-3">
-          <button type="button" onClick={() => setImporting(true)} className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium">
-            <FiPlus className="h-4 w-4" />采集素材
+          <button type="button" onClick={() => setAgentOpen(true)} className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium">
+            <FiCompass className="h-4 w-4" />AI 找素材
+          </button>
+          <button type="button" onClick={() => setImporting(true)} className="btn-secondary inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm">
+            <FiPlus className="h-4 w-4" />手动导入
           </button>
           <button type="button" onClick={batchAnalyze} disabled={batchBusy} className="btn-secondary inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm disabled:opacity-50">
             {batchBusy ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiZap className="h-4 w-4" />}AI分析待分析
@@ -260,6 +265,7 @@ export default function MaterialCenter() {
         </div>
       </div>
 
+      {agentOpen && <AgentDialog onClose={() => setAgentOpen(false)} onDone={refresh} />}
       {importing && <ImportForm onClose={() => setImporting(false)} onCreated={(m) => { setMaterials((p) => [m, ...p]); setImporting(false); }} />}
       {detail && (
         <DetailModal
@@ -340,6 +346,74 @@ function ImportForm({ onClose, onCreated }: { onClose: () => void; onCreated: (m
           <button type="button" onClick={onClose} className="btn-secondary rounded-lg px-4 py-2 text-sm">取消</button>
           <button type="button" onClick={save} disabled={saving} className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">
             {saving ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiPlus className="h-4 w-4" />}保存
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [task, setTask] = useState("适合历史频道、有人物有冲突有结局的真实历史故事");
+  const [category, setCategory] = useState<string>("历史");
+  const [count, setCount] = useState(5);
+  const [autoAnalyze, setAutoAnalyze] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function run() {
+    if (!task.trim()) { setErr("请填写要找什么素材"); return; }
+    setBusy(true);
+    setErr(null);
+    setResult(null);
+    try {
+      const res = await fetch("/api/materials/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task, count, category, autoAnalyze }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Agent 运行失败");
+      setResult(`找到 ${data.found} 篇 · 入库 ${data.created} 篇 · 跳过重复 ${data.skipped} 篇`);
+      onDone();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-xl bg-[var(--bg-surface)] p-5 shadow-2xl">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">AI 找素材（联网搜索）</h3>
+          <button type="button" onClick={onClose} className="text-[var(--text-caption)] hover:text-[var(--text-primary)]"><FiX className="h-5 w-5" /></button>
+        </div>
+        <p className="mb-3 text-xs leading-relaxed text-[var(--text-caption)]">
+          Agent 用 OpenAI 联网搜索去全网找素材、自动入库（可顺带分析）。会自动去重。联网搜索按次计费，建议先小批量。
+        </p>
+        <div className="space-y-2.5">
+          <textarea className="input-field min-h-[70px] w-full rounded-lg px-3 py-2 text-sm" value={task} onChange={(e) => setTask(e.target.value)} placeholder="要找什么素材？例如：适合历史频道、有反转的真实悬案" />
+          <div className="flex items-center gap-2">
+            <select className="input-field rounded-lg px-3 py-2 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
+              {MATERIAL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <label className="text-sm text-[var(--text-secondary)]">数量
+              <input type="number" min={1} max={20} value={count} onChange={(e) => setCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))} className="input-field ml-2 w-16 rounded-lg px-2 py-1.5 text-sm" />
+            </label>
+            <label className="ml-auto flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+              <input type="checkbox" checked={autoAnalyze} onChange={(e) => setAutoAnalyze(e.target.checked)} />自动分析
+            </label>
+          </div>
+        </div>
+        {err && <p className="mt-2 text-xs font-medium text-[var(--danger)]">{err}</p>}
+        {result && <p className="mt-2 text-sm font-medium text-[var(--accent)]">{result}</p>}
+        <div className="mt-3 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-secondary rounded-lg px-4 py-2 text-sm">关闭</button>
+          <button type="button" onClick={run} disabled={busy} className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">
+            {busy ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiCompass className="h-4 w-4" />}{busy ? "搜索入库中…" : "开始找素材"}
           </button>
         </div>
       </div>
