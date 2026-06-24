@@ -6,6 +6,7 @@ import {
   FiClock,
   FiFilm,
   FiGrid,
+  FiInbox,
   FiMoon,
   FiSun,
   FiTrendingUp,
@@ -23,6 +24,7 @@ import { patchUiState } from "@/app/lib/ui-state/store";
 const NAV_ICONS: Record<AppNavId, React.ComponentType<{ className?: string }>> = {
   "ai-video": FiVideo,
   canvas: FiGrid,
+  materials: FiInbox,
   characters: FiUsers,
   "dynamic-image": FiFilm,
   history: FiClock,
