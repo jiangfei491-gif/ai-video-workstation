@@ -4,6 +4,21 @@ import { alignTimelineAfterVoiceSynth, parseShotIndexFromNarrKey } from "./align
 import { alignSubtitlesWithWhisper } from "./transcribe-align";
 import type { VoiceCenterProviderId, VoiceQualityHint } from "@/app/lib/voice-center";
 
+/** 批量配音时镜头间限速，降低 Edge TTS 被 Microsoft 限流概率。可用 VOICE_BATCH_GAP_MS 覆盖。 */
+const VOICE_BATCH_GAP_MS = Number(process.env.VOICE_BATCH_GAP_MS) || 350;
+const VOICE_BATCH_GAP_JITTER_MS = Number(process.env.VOICE_BATCH_GAP_JITTER_MS) || 150;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function paceBatchVoiceSynth(): Promise<void> {
+  if (VOICE_BATCH_GAP_MS <= 0) return;
+  const jitter =
+    VOICE_BATCH_GAP_JITTER_MS > 0
+      ? Math.floor(Math.random() * VOICE_BATCH_GAP_JITTER_MS)
+      : 0;
+  await sleep(VOICE_BATCH_GAP_MS + jitter);
+}
+
 export type VoiceEnsureResult = {
   mediaPool: MediaPoolItem[];
   timeline: EditTimeline;
@@ -43,6 +58,7 @@ export async function ensureVoiceClips(params: {
     }
 
     params.onClip?.(shotIndex, `配音 · 镜 ${shotIndex + 1}`);
+    await paceBatchVoiceSynth();
 
     // 单镜头配音失败不应拖垮整批：记录失败、保留原镜长估算，继续下一镜
     try {
