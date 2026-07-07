@@ -1,11 +1,19 @@
+import { saveWorkbenchToServer } from "./server-store";
+
 const VIDEO_CACHE_PREFIX = "workbench-video:";
 
-export function loadJson<T>(key: string): T | null {
+/** Workbench 业务状态仅走 PostgreSQL，不再读写 localStorage */
+export function loadJson<T>(_key: string): T | null {
+  return null;
+}
+
+export async function loadJsonFromServer<T>(_key: string): Promise<T | null> {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(key) ?? localStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as T;
+    const res = await fetch("/api/workbench/session", { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { state?: T };
+    return data.state ?? null;
   } catch {
     return null;
   }
@@ -13,18 +21,8 @@ export function loadJson<T>(key: string): T | null {
 
 export function saveJson(key: string, value: unknown, opts?: { stripLargeUrls?: boolean }): void {
   if (typeof window === "undefined") return;
-  try {
-    const payload = opts?.stripLargeUrls ? stripLargeDataUrls(value) : value;
-    const raw = JSON.stringify(payload);
-    sessionStorage.setItem(key, raw);
-    try {
-      localStorage.setItem(key, raw);
-    } catch {
-      localStorage.setItem(key, JSON.stringify(stripLargeDataUrls(value)));
-    }
-  } catch {
-    /* quota */
-  }
+  const payload = opts?.stripLargeUrls ? stripLargeDataUrls(value) : value;
+  void saveWorkbenchToServer(key, payload);
 }
 
 function stripLargeDataUrls(value: unknown): unknown {
@@ -54,7 +52,6 @@ function stripLargeDataUrls(value: unknown): unknown {
       /* ignore */
     }
   }
-  // 批量生成结果：把 data: 视频转存到 sessionStorage，避免撑爆 localStorage
   const batchResults = clone.batchResults as
     | Record<string, Record<string, unknown>>
     | null

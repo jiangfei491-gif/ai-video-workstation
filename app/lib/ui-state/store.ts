@@ -8,6 +8,9 @@ export type HistoryTab = "video" | "image";
 export type UiState = {
   currentMenu: AppNavId;
   currentHistoryTab: HistoryTab;
+  /** 底部工作台动态面板 */
+  activityPanelOpen: boolean;
+  activityPanelHeight: number;
 };
 
 const STORAGE_KEY = "workbench:ui-state";
@@ -15,6 +18,8 @@ const STORAGE_KEY = "workbench:ui-state";
 const defaultState: UiState = {
   currentMenu: "ai-video",
   currentHistoryTab: "video",
+  activityPanelOpen: true,
+  activityPanelHeight: 200,
 };
 
 let state: UiState = { ...defaultState };
@@ -26,7 +31,18 @@ function hydrate(): void {
   hydrated = true;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state = { ...defaultState, ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<UiState>;
+      if (parsed.currentMenu === ("characters" as AppNavId)) {
+        parsed.currentMenu = "resources";
+      }
+      if (parsed.currentMenu === ("dynamic-image" as AppNavId)) {
+        parsed.currentMenu = "ai-video";
+      }
+      state = { ...defaultState, ...parsed };
+      state.activityPanelOpen = parsed.activityPanelOpen ?? defaultState.activityPanelOpen;
+      state.activityPanelHeight = parsed.activityPanelHeight ?? defaultState.activityPanelHeight;
+    }
   } catch {
     state = { ...defaultState };
   }

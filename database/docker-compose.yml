@@ -1,0 +1,27 @@
+# AI Cut V1 — M0 开发用 PostgreSQL（仅本地基础设施）
+# 用法: cd database && docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-cut-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ai_cut
+      POSTGRES_PASSWORD: ai_cut_dev
+      POSTGRES_DB: ai_cut_v1
+    ports:
+      - "5433:5432"
+    volumes:
+      - ai_cut_pg_data:/var/lib/postgresql/data
+      - ./schema:/schema:ro
+      - ./seeders:/seeders:ro
+      - ./migrations:/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_cut -d ai_cut_v1"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ai_cut_pg_data:

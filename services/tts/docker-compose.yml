@@ -1,0 +1,74 @@
+# AI Video OS — Fish Speech + CosyVoice 官方 Docker + 标准 HTTP 桥接
+# 用法: bash scripts/deploy-local-tts.sh
+
+name: ai-video-os-tts
+
+services:
+  fish-speech:
+    image: fishaudio/fish-speech:server-cpu
+    container_name: ai-os-fish-speech
+    restart: unless-stopped
+    ports:
+      - "${FISH_SPEECH_UPSTREAM_PORT:-8080}:8080"
+    volumes:
+      - ./checkpoints:/app/checkpoints
+      - ./references:/app/references
+      - ./fish-start.sh:/app/fish-start.sh:ro
+    environment:
+      BACKEND: cpu
+      API_SERVER_NAME: "0.0.0.0"
+      API_SERVER_PORT: "8080"
+      LLAMA_CHECKPOINT_PATH: "checkpoints/openaudio-s1-mini"
+      DECODER_CHECKPOINT_PATH: "checkpoints/openaudio-s1-mini/codec.pth"
+      DECODER_CONFIG_NAME: "modded_dac_vq"
+    entrypoint: ["/bin/bash", "/app/fish-start.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  fish-bridge:
+    build: ./bridge
+    container_name: ai-os-fish-bridge
+    restart: unless-stopped
+    depends_on:
+      fish-speech:
+        condition: service_started
+    ports:
+      - "${FISH_SPEECH_BRIDGE_PORT:-19080}:9080"
+    environment:
+      BRIDGE_KIND: fish-speech
+      UPSTREAM_URL: http://fish-speech:8080
+      BRIDGE_PORT: "9080"
+
+  cosyvoice:
+    image: cosyvoice:v1.0
+    container_name: ai-os-cosyvoice
+    profiles: ["cosyvoice"]
+    restart: unless-stopped
+    ports:
+      - "${COSYVOICE_UPSTREAM_PORT:-50000}:50000"
+    volumes:
+      - cosyvoice-models:/root/.cache/modelscope
+    command: >
+      /bin/bash -c "cd /opt/CosyVoice/CosyVoice/runtime/python/fastapi &&
+      python3 server.py --port 50000 --model_dir iic/CosyVoice-300M"
+
+  cosy-bridge:
+    build: ./bridge
+    container_name: ai-os-cosy-bridge
+    profiles: ["cosyvoice"]
+    restart: unless-stopped
+    depends_on:
+      - cosyvoice
+    ports:
+      - "${COSYVOICE_BRIDGE_PORT:-19081}:9080"
+    environment:
+      BRIDGE_KIND: cosyvoice
+      UPSTREAM_URL: http://cosyvoice:50000
+      BRIDGE_PORT: "9080"
+
+volumes:
+  cosyvoice-models:

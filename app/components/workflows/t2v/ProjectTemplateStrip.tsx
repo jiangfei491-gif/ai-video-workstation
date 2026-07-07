@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { FiUser, FiMapPin, FiX } from "react-icons/fi";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FiUser, FiMapPin } from "react-icons/fi";
+import ImageGalleryLightbox, {
+  findGalleryIndex,
+  refImageGalleryItems,
+} from "@/app/components/workflows/shared/ImageGalleryLightbox";
 
 type Item = { id: string; name: string; refImageUrl: string | null; detail: string };
 
@@ -20,7 +24,7 @@ type Props = {
 /** 右栏顶部的模板预览窗：横向展示本项目用到的角色/场景图，点击看大图 */
 export default function ProjectTemplateStrip({ title, ids, apiPath, listKey, detailKey, icon }: Props) {
   const [items, setItems] = useState<Item[]>([]);
-  const [preview, setPreview] = useState<Item | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const idsKey = ids.join(",");
 
   const refresh = useCallback(async () => {
@@ -49,6 +53,10 @@ export default function ProjectTemplateStrip({ title, ids, apiPath, listKey, det
   }, [refresh, idsKey]);
 
   const imported = items.filter((i) => ids.includes(i.id));
+  const galleryItems = useMemo(
+    () => refImageGalleryItems(imported, (it) => it.detail),
+    [imported]
+  );
   const Icon = icon === "user" ? FiUser : FiMapPin;
 
   return (
@@ -69,7 +77,11 @@ export default function ProjectTemplateStrip({ title, ids, apiPath, listKey, det
                   <img
                     src={it.refImageUrl}
                     alt={it.name}
-                    onClick={() => setPreview(it)}
+                    onClick={() => {
+                      if (it.refImageUrl) {
+                        setPreviewIndex(findGalleryIndex(galleryItems, it.refImageUrl));
+                      }
+                    }}
                     className="h-full w-full cursor-zoom-in object-cover"
                     title="点击看大图"
                   />
@@ -87,20 +99,13 @@ export default function ProjectTemplateStrip({ title, ids, apiPath, listKey, det
         </div>
       )}
 
-      {preview?.refImageUrl && (
-        <div onClick={() => setPreview(null)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6">
-          <div onClick={(e) => e.stopPropagation()} className="flex max-h-full max-w-4xl flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] shadow-2xl">
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5">
-              <span className="font-mono text-sm font-semibold text-[var(--accent)]">@{preview.name}</span>
-              <button type="button" onClick={() => setPreview(null)} className="text-[var(--text-caption)] hover:text-[var(--text-primary)]">
-                <FiX className="h-5 w-5" />
-              </button>
-            </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview.refImageUrl} alt={preview.name} className="min-h-0 w-full flex-1 object-contain" />
-            <p className="border-t border-[var(--border)] px-4 py-2.5 text-xs leading-relaxed text-[var(--text-secondary)]">{preview.detail}</p>
-          </div>
-        </div>
+      {previewIndex !== null && galleryItems.length > 0 && (
+        <ImageGalleryLightbox
+          items={galleryItems}
+          index={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          onIndexChange={setPreviewIndex}
+        />
       )}
     </div>
   );

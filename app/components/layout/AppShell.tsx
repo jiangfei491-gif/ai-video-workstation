@@ -3,30 +3,48 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  FiCompass,
   FiClock,
   FiFilm,
   FiGrid,
   FiInbox,
+  FiLayers,
+  FiMic,
+  FiMusic,
+  FiType,
+  FiZap,
   FiMoon,
+  FiShield,
   FiSun,
   FiTrendingUp,
-  FiUsers,
   FiVideo,
+  FiCpu,
+  FiDollarSign,
 } from "react-icons/fi";
 import {
   APP_NAV_ITEMS,
   resolveActiveNavId,
   type AppNavId,
 } from "@/app/lib/nav-config";
+import WorkbenchActivityPanel from "@/app/components/layout/WorkbenchActivityPanel";
+import EditRenderJobTracker from "@/app/components/layout/EditRenderJobTracker";
 import { useTheme } from "@/app/lib/theme/store";
 import { patchUiState } from "@/app/lib/ui-state/store";
 
 const NAV_ICONS: Record<AppNavId, React.ComponentType<{ className?: string }>> = {
+  "ai-director": FiCompass,
   "ai-video": FiVideo,
+  "ai-edit": FiFilm,
   canvas: FiGrid,
   materials: FiInbox,
-  characters: FiUsers,
-  "dynamic-image": FiFilm,
+  "voice-center": FiMic,
+  "subtitle-center": FiType,
+  "music-center": FiMusic,
+  "effect-center": FiZap,
+  "qa-center": FiShield,
+  resources: FiLayers,
+  "intelligence-center": FiCpu,
+  cost: FiDollarSign,
   history: FiClock,
   trends: FiTrendingUp,
 };
@@ -82,7 +100,11 @@ export default function AppShell({ children }: AppShellProps) {
           </button>
         </div>
       </aside>
-      <div className="relative min-w-0 flex-1 overflow-hidden">{children}</div>
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <EditRenderJobTracker />
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+        <WorkbenchActivityPanel />
+      </div>
     </div>
   );
 }

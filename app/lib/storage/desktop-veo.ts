@@ -1,25 +1,47 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 
-export const DESKTOP_VEO_ROOT = path.join(
-  os.homedir(),
-  "Desktop",
-  "AI-Veo"
-);
+import {
+  defaultProjectId,
+  libraryBgmDir,
+  productionJsonFilePath,
+  projectAudioDir,
+  projectImagesDir,
+  projectVideosDir,
+  resolveWorkspaceRelativeFile,
+  toWorkspaceFileUrl,
+} from "./workspace-paths";
+import { getWorkspaceManager } from "@/database/workspace";
+
+/** @deprecated 使用 workspaceRoot */
+export const DESKTOP_VEO_ROOT = () => getWorkspaceManager().workspaceRoot;
 
 export const DESKTOP_VEO_DIRS = {
-  root: DESKTOP_VEO_ROOT,
-  images: path.join(DESKTOP_VEO_ROOT, "Images"),
-  videos: path.join(DESKTOP_VEO_ROOT, "Videos"),
-  projects: path.join(DESKTOP_VEO_ROOT, "Projects"),
-  archive: path.join(DESKTOP_VEO_ROOT, "Archive"),
+  get root() {
+    return getWorkspaceManager().workspaceRoot;
+  },
+  get images() {
+    return projectImagesDir();
+  },
+  get videos() {
+    return projectVideosDir();
+  },
+  get audio() {
+    return projectAudioDir();
+  },
+  get bgm() {
+    return libraryBgmDir();
+  },
+  get projects() {
+    return getWorkspaceManager().getLibraryPaths().materials;
+  },
+  get archive() {
+    return getWorkspaceManager().backupRoot;
+  },
 } as const;
 
 export function ensureDesktopVeoLayout(): void {
-  for (const dir of Object.values(DESKTOP_VEO_DIRS)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  getWorkspaceManager().ensureLayout({ includeProjectId: defaultProjectId() });
 }
 
 export function desktopImagePath(filename: string): string {
@@ -32,26 +54,27 @@ export function desktopVideoPath(filename: string): string {
   return path.join(DESKTOP_VEO_DIRS.videos, filename);
 }
 
+export function desktopAudioPath(filename: string): string {
+  ensureDesktopVeoLayout();
+  return path.join(DESKTOP_VEO_DIRS.audio, filename);
+}
+
+export function desktopBgmPath(filename: string): string {
+  ensureDesktopVeoLayout();
+  return path.join(DESKTOP_VEO_DIRS.bgm, filename);
+}
+
 export function desktopProjectPath(projectId: string, filename: string): string {
   ensureDesktopVeoLayout();
-  const dir = path.join(DESKTOP_VEO_DIRS.projects, projectId);
+  const dir = getWorkspaceManager().getProjectPaths(projectId).metadata;
   fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, filename);
 }
 
-/** 正式模式下对外可访问的本地文件路径（供 API 读取） */
 export function toDesktopFileUrl(relativePath: string): string {
-  return `/api/files/${relativePath.split(path.sep).join("/")}`;
+  return toWorkspaceFileUrl(relativePath);
 }
 
 export function resolveDesktopFile(relativePath: string): string | null {
-  const root = path.resolve(DESKTOP_VEO_ROOT);
-  const filepath = path.resolve(root, relativePath);
-  if (!filepath.startsWith(`${root}${path.sep}`) && filepath !== root) {
-    return null;
-  }
-  if (!fs.existsSync(filepath) || !fs.statSync(filepath).isFile()) {
-    return null;
-  }
-  return filepath;
+  return resolveWorkspaceRelativeFile(relativePath);
 }

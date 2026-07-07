@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import os from "os";
-import path from "path";
 import { randomUUID } from "crypto";
 import { extractPromptFromVideoFrames } from "@/app/lib/director/extract-prompt-from-video";
 import { extractFramesFromVideo } from "@/app/lib/veo/first-frame";
 import { getOpenAIApiKey } from "@/app/lib/openai-key";
+import { tempFilePath } from "@/app/lib/storage/workspace-paths";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +35,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "视频过大（上限 60MB），请压缩后重试" }, { status: 413 });
   }
 
-  const tmpVideo = path.join(os.tmpdir(), `v2p-${randomUUID()}.mp4`);
+  const tmpVideo = tempFilePath(`v2p-${randomUUID()}.mp4`);
   try {
     const bytes = Buffer.from(await file.arrayBuffer());
     fs.writeFileSync(tmpVideo, bytes);

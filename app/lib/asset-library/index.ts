@@ -4,6 +4,7 @@ export type {
   VideoClipAsset,
   CharacterAsset,
   SceneAsset,
+  PropAsset,
 } from "./types";
 export {
   listImageAssets,
@@ -27,6 +28,12 @@ export {
   updateSceneImage,
   deleteScene,
 } from "./scene-store";
+export {
+  listProps,
+  getProp,
+  createProp,
+  deleteProp,
+} from "./prop-store";
 export {
   expandCharacterRefs,
   expandCharacterRefsFromStore,

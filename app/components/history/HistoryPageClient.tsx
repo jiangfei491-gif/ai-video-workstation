@@ -22,9 +22,9 @@ import {
 } from "@/app/lib/history/video-store";
 import { patchUiState, useUiState } from "@/app/lib/ui-state/store";
 import { restoreT2VFromHistory } from "@/app/lib/workbench-persist/t2v-store";
-import { setT2IState } from "@/app/lib/workbench-persist/t2i-store";
 import { isExportSuccess, normalizeExportMeta } from "@/app/lib/export/types";
-import { inferSeedMode } from "@/app/lib/generation-params";
+import { inferSeedMode, normalizeClarity } from "@/app/lib/generation-params";
+import { normalizePipelineMode } from "@/app/lib/pipeline-mode";
 import { blobToObjectUrl } from "@/app/lib/history/blob-store";
 import type { HistoryTab } from "@/app/lib/ui-state/store";
 
@@ -69,7 +69,8 @@ export default function HistoryPageClient() {
       shotDurationSec: entry.shotParams.shotDurationSec as 3 | 5 | 8 | 10,
       fps: entry.shotParams.fps,
       aspectRatio: entry.shotParams.aspectRatio,
-      clarity: entry.shotParams.clarity,
+      clarity: normalizeClarity(entry.shotParams.clarity),
+      pipelineMode: normalizePipelineMode(entry.shotParams.pipelineMode),
       workspaceMode: entry.shotParams.workspaceMode,
       characterConsistency: entry.shotParams.characterConsistency,
       sceneConsistency: entry.shotParams.sceneConsistency,
@@ -92,34 +93,17 @@ export default function HistoryPageClient() {
   async function handleRestoreImage(id: string) {
     const entry = getImageHistoryById(id);
     if (!entry) return;
-    const images = await Promise.all(
-      entry.images.map(async (img) => ({
-        id: img.id,
-        prompt: entry.prompt,
-        previewUrl: img.publicUrl ?? (await blobToObjectUrl(img.blobId)) ?? "",
-        publicUrl: img.publicUrl,
-        blobId: img.blobId,
-        width: img.width,
-        height: img.height,
-        model: "restored",
-        createdAt: entry.createdAt,
-      }))
-    );
-    setT2IState({
-      topic: entry.topic,
-      prompt: entry.prompt,
-      style: entry.style,
+    restoreT2VFromHistory({
+      topic: entry.topic || entry.prompt,
+      pipelineMode: "t2i",
       aspectRatio: entry.aspectRatio,
-      clarity: entry.clarity,
-      imageCount: entry.imageParams.imageCount as 1 | 2 | 4 | 8,
+      clarity: normalizeClarity(entry.clarity),
       seedMode: inferSeedMode(entry.imageParams.seedMode, entry.imageParams.seed),
       seed: entry.imageParams.seed,
       export: normalizeExportMeta(entry.export),
-      images,
-      selectedImageId: images[0]?.id ?? null,
       historyEntryId: entry.id,
     });
-    router.push("/dynamic-image");
+    router.push("/ai-video");
   }
 
   function deleteConfirmMessage(): string {
@@ -171,7 +155,7 @@ export default function HistoryPageClient() {
                     : "text-[var(--text-secondary)]"
                 }`}
               >
-                {t === "video" ? "视频创作历史" : "动态图片历史"}
+                {t === "video" ? "创作中心历史" : "图片历史"}
               </button>
             ))}
           </div>
@@ -205,7 +189,7 @@ export default function HistoryPageClient() {
                 variant="secondary"
                 onClick={() => setConfirm({ type: "clear-video" })}
               >
-                清空视频创作历史
+                清空创作中心历史
               </LoadingButton>
             )}
             {tab === "image" && imageEntries.length > 0 && (
@@ -213,7 +197,7 @@ export default function HistoryPageClient() {
                 variant="secondary"
                 onClick={() => setConfirm({ type: "clear-image" })}
               >
-                清空动态图片历史
+                清空图片历史
               </LoadingButton>
             )}
             {(videoEntries.length > 0 || imageEntries.length > 0) && (

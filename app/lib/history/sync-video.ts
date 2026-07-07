@@ -66,6 +66,7 @@ export async function syncVideoHistoryFromWorkbench(
       fps: state.fps,
       aspectRatio: state.aspectRatio,
       clarity: state.clarity,
+      pipelineMode: state.pipelineMode,
       workspaceMode: state.workspaceMode,
       characterConsistency: state.characterConsistency,
       sceneConsistency: state.sceneConsistency,

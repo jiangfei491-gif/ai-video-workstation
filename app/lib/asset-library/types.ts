@@ -1,6 +1,6 @@
 export type ImageAsset = {
   id: string;
-  source: "gpt-image-2" | "gpt-image-1";
+  source: "gpt-image-2" | "gpt-image-1" | "flux-schnell" | "flux-dev" | "imagen-3" | string;
   prompt: string;
   filepath: string;
   publicUrl: string;
@@ -41,6 +41,15 @@ export type CharacterAsset = {
   name: string;
   /** 注入提示词的外观描述（英文，服装/特征锚点） */
   appearance: string;
+  /** 结构化锁定字段（可选，与 appearance 互补） */
+  age?: string;
+  gender?: string;
+  hair?: string;
+  clothing?: string;
+  bodyType?: string;
+  facialFeatures?: string;
+  colorPalette?: string;
+  forbiddenChanges?: string;
   /** 参考图（可选） */
   refImageUrl?: string;
   refImagePath?: string;
@@ -57,6 +66,30 @@ export type SceneAsset = {
   name: string;
   /** 注入提示词的环境描述（英文，地点/光线/氛围锚点） */
   description: string;
+  timeOfDay?: string;
+  weather?: string;
+  mainLightSource?: string;
+  cameraLanguage?: string;
+  backgroundElements?: string;
+  forbiddenChanges?: string;
+  refImageUrl?: string;
+  refImagePath?: string;
+  createdAt: string;
+};
+
+/**
+ * 道具档案 —— 汽车、手机、警车等跨镜头固定物体。
+ * 提示词里写 @道具名，生成前替换为固定描述。
+ */
+export type PropAsset = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  brand?: string;
+  color?: string;
+  material?: string;
+  forbiddenChanges?: string;
   refImageUrl?: string;
   refImagePath?: string;
   createdAt: string;

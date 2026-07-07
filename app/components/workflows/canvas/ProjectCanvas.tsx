@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiUser,
   FiZoomIn,
@@ -10,11 +10,19 @@ import {
   FiLoader,
   FiPlus,
   FiTrash2,
-  FiX,
 } from "react-icons/fi";
-import { useT2VWorkbenchStore } from "@/app/lib/workbench-persist/t2v-store";
+import { useT2VWorkbenchStore, getT2VState } from "@/app/lib/workbench-persist/t2v-store";
+import type { CanvasUiState } from "@/app/lib/workbench-persist/types";
+import { playOrderIndex } from "@/app/lib/auto-edit/workbench-bridge";
+import ImageGalleryLightbox, {
+  findGalleryIndex,
+  shotImageGalleryItems,
+} from "@/app/components/workflows/shared/ImageGalleryLightbox";
 import { fileToScaledDataUrl } from "@/app/lib/image-client";
-import { STYLE_PRESETS } from "@/app/lib/director/prompt-blueprint";
+import {
+  aspectRatioCss,
+  parseAspectRatioString,
+} from "@/app/lib/generation-params";
 
 type Character = {
   id: string;
@@ -25,7 +33,8 @@ type Character = {
 };
 
 const SHOT_W = 320;
-const SHOT_H = 340;
+const SHOT_HEADER_H = 44;
+const SHOT_TEXT_H = 76;
 const CHAR_W = 250;
 const CHAR_H = 320;
 const REF_W = 240;
@@ -33,30 +42,64 @@ const REF_H = 240;
 const GAP = 48;
 const MM_W = 168;
 const MM_H = 112;
+const MIN_ZOOM = 0.05;
+const MAX_ZOOM = 4;
 
 type Mode = "pan" | "card" | "link" | "marquee" | "section" | null;
 type Rect = { x: number; y: number; w: number; h: number };
 
-function sizeOf(key: string) {
-  if (key.startsWith("char-")) return { w: CHAR_W, h: CHAR_H };
-  if (key.startsWith("ref-")) return { w: REF_W, h: REF_H };
-  return { w: SHOT_W, h: SHOT_H };
+function computeShotCardHeight(aspectCss: string, cardWidth = SHOT_W): number {
+  const parts = aspectCss.split("/").map((s) => parseFloat(s.trim()));
+  const aw = parts[0] || 9;
+  const ah = parts[1] || 16;
+  const mediaH = (cardWidth * ah) / aw;
+  return Math.round(SHOT_HEADER_H + mediaH + SHOT_TEXT_H);
 }
+
+function shotAspectCssForIndex(
+  index: number,
+  aspectRatio: string,
+  customAspectRatio: string | undefined,
+  shotImageMeta?: Record<number, { aspectRatio?: string }>
+): string {
+  const metaRatio = shotImageMeta?.[index]?.aspectRatio;
+  if (metaRatio) {
+    const { w, h } = parseAspectRatioString(metaRatio);
+    return `${w} / ${h}`;
+  }
+  return aspectRatioCss(aspectRatio, customAspectRatio);
+}
+
 function rectsIntersect(a: Rect, b: Rect) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-export default function ProjectCanvas() {
+export default function ProjectCanvas({
+  immersive = false,
+  reserveBottomChrome = true,
+  focusShotIndex = null,
+  focusToken = 0,
+  onFocusHandled,
+}: {
+  immersive?: boolean;
+  /** immersive 模式下是否为底部 MiniTimeline 预留空白；融合视图传 false */
+  reserveBottomChrome?: boolean;
+  focusShotIndex?: number | null;
+  focusToken?: number;
+  onFocusHandled?: () => void;
+}) {
   const { state, patch } = useT2VWorkbenchStore();
-  const { director, characterIds, canvasLinks, canvasRefs } = state;
+  const { director, characterIds, canvasLinks, canvasRefs, editSequence, canvasUi } = state;
 
   const [chars, setChars] = useState<Character[]>([]);
-  const [pan, setPan] = useState({ x: 40, y: 24 });
-  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState(canvasUi.canvasPan);
+  const [zoom, setZoom] = useState(canvasUi.canvasZoom);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>(
     state.canvasPositions
   );
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(canvasUi.canvasSelectedKeys)
+  );
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const [linking, setLinking] = useState(false);
   const [tempLink, setTempLink] = useState<{ from: { x: number; y: number }; to: { x: number; y: number } } | null>(null);
@@ -65,8 +108,7 @@ export default function ProjectCanvas() {
   const [varying, setVarying] = useState<Record<number, boolean>>({});
   const [variants, setVariants] = useState<Record<number, { url: string; assetId: string }[]>>({});
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [styleOpen, setStyleOpen] = useState(false);
-  const [framePreview, setFramePreview] = useState<string | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
   const [sectionLive, setSectionLive] = useState<{ id: string; x: number; y: number } | null>(null);
   const sectionDragRef = useRef<{ id: string; sm: { x: number; y: number }; sp: { x: number; y: number } } | null>(null);
 
@@ -89,14 +131,103 @@ export default function ProjectCanvas() {
     selectedRef.current = selected;
   });
 
+  const canvasUiPersistRef = useRef<number | null>(null);
+  const persistCanvasViewport = useCallback(
+    (partial: Partial<CanvasUiState>) => {
+      const cur = getT2VState();
+      patch({ canvasUi: { ...cur.canvasUi, ...partial } });
+    },
+    [patch]
+  );
+
+  useEffect(() => {
+    if (focusShotIndex == null || !focusToken) return;
+    const key = `shot-${focusShotIndex}`;
+    const pos = positionsRef.current[key] ?? state.canvasPositions[key];
+    const el = viewportRef.current;
+    if (!pos || !el) return;
+
+    const aspectCss = shotAspectCssForIndex(
+      focusShotIndex,
+      state.aspectRatio,
+      state.customAspectRatio,
+      state.shotImageMeta
+    );
+    const cardH = computeShotCardHeight(aspectCss);
+    const z = zoomRef.current;
+    const rect = el.getBoundingClientRect();
+    setPan({
+      x: rect.width / 2 - (pos.x + SHOT_W / 2) * z,
+      y: rect.height / 2 - (pos.y + cardH / 2) * z,
+    });
+    setSelected(new Set([key]));
+    patch({ activeShotIdx: focusShotIndex });
+    persistCanvasViewport({ canvasSelectedKeys: [key], canvasPan: {
+      x: rect.width / 2 - (pos.x + SHOT_W / 2) * z,
+      y: rect.height / 2 - (pos.y + cardH / 2) * z,
+    }});
+    onFocusHandled?.();
+  }, [focusShotIndex, focusToken, onFocusHandled, patch, persistCanvasViewport, state.aspectRatio, state.customAspectRatio, state.canvasPositions, state.shotImageMeta]);
+
   // 仓库位置变化时（含刷新后读出存档、跨标签同步）同步回本地，
   // 修复"首次渲染时仓库未水合 → 本地为空 → 刷新丢失已摆放位置"
   useEffect(() => {
     setPositions(state.canvasPositions);
   }, [state.canvasPositions]);
 
+  useEffect(() => {
+    if (canvasUiPersistRef.current) window.clearTimeout(canvasUiPersistRef.current);
+    canvasUiPersistRef.current = window.setTimeout(() => {
+      persistCanvasViewport({
+        canvasPan: pan,
+        canvasZoom: zoom,
+        canvasSelectedKeys: [...selected],
+      });
+    }, 200);
+    return () => {
+      if (canvasUiPersistRef.current) window.clearTimeout(canvasUiPersistRef.current);
+    };
+  }, [pan, zoom, selected, persistCanvasViewport]);
+
+  const didAutoFitRef = useRef(false);
+
   const importedChars = chars.filter((c) => characterIds.includes(c.id));
   const shots = director?.prompts ?? [];
+
+  const frameGalleryItems = useMemo(
+    () => shotImageGalleryItems(shots.length, state.shotFrames ?? {}, (i) => `镜头 ${i + 1}`),
+    [shots.length, state.shotFrames]
+  );
+
+  const defaultShotAspectCss = aspectRatioCss(state.aspectRatio, state.customAspectRatio);
+  const defaultShotCardH = useMemo(
+    () => computeShotCardHeight(defaultShotAspectCss),
+    [defaultShotAspectCss]
+  );
+
+  const sizeOf = useCallback(
+    (key: string) => {
+      if (key.startsWith("char-")) return { w: CHAR_W, h: CHAR_H };
+      if (key.startsWith("ref-")) return { w: REF_W, h: REF_H };
+      if (key.startsWith("shot-")) {
+        const idx = Number(key.slice(5));
+        const aspectCss = Number.isFinite(idx)
+          ? shotAspectCssForIndex(idx, state.aspectRatio, state.customAspectRatio, state.shotImageMeta)
+          : defaultShotAspectCss;
+        return { w: SHOT_W, h: computeShotCardHeight(aspectCss) };
+      }
+      return { w: SHOT_W, h: defaultShotCardH };
+    },
+    [state.aspectRatio, state.customAspectRatio, state.shotImageMeta, defaultShotAspectCss, defaultShotCardH]
+  );
+
+  const openFramePreview = useCallback(
+    (url: string) => {
+      if (!frameGalleryItems.length) return;
+      setGalleryIndex(findGalleryIndex(frameGalleryItems, url));
+    },
+    [frameGalleryItems]
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -120,12 +251,12 @@ export default function ProjectCanvas() {
       }
       if (key.startsWith("ref-")) {
         const i = canvasRefs.findIndex((r) => `ref-${r.id}` === key);
-        return { x: 40 + Math.max(0, i) * (REF_W + GAP), y: 40 + CHAR_H + 90 + SHOT_H + 70 };
+        return { x: 40 + Math.max(0, i) * (REF_W + GAP), y: 40 + CHAR_H + 90 + defaultShotCardH + 70 };
       }
       const i = Number(key.replace("shot-", "")) || 0;
       return { x: 40 + i * (SHOT_W + GAP), y: 40 + CHAR_H + 90 };
     },
-    [importedChars, canvasRefs]
+    [importedChars, canvasRefs, defaultShotCardH]
   );
   const posOf = useCallback(
     (key: string) => positions[key] ?? defaultPos(key),
@@ -378,20 +509,26 @@ export default function ProjectCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [director, chars, canvasLinks, canvasRefs, characterIds, state.canvasSections, state.canvasEdges, allKeys.join(",")]);
 
-  // 滚轮缩放（围绕光标）
+  // 无限画布滚轮：默认平移；Ctrl/⌘+滚轮（含触控板捏合）围绕光标缩放；Shift+滚轮横向平移
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
     function onWheel(e: WheelEvent) {
       e.preventDefault();
-      const r = el!.getBoundingClientRect();
-      const mx = e.clientX - r.left;
-      const my = e.clientY - r.top;
       const z = zoomRef.current;
       const p = panStateRef.current;
-      const nz = Math.min(2, Math.max(0.2, z * (1 - e.deltaY * 0.0015)));
-      setPan({ x: mx - ((mx - p.x) / z) * nz, y: my - ((my - p.y) / z) * nz });
-      setZoom(nz);
+      if (e.ctrlKey || e.metaKey) {
+        const r = el!.getBoundingClientRect();
+        const mx = e.clientX - r.left;
+        const my = e.clientY - r.top;
+        const nz = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * (1 - e.deltaY * 0.0015)));
+        setPan({ x: mx - ((mx - p.x) / z) * nz, y: my - ((my - p.y) / z) * nz });
+        setZoom(nz);
+      } else {
+        const dx = e.shiftKey && e.deltaX === 0 ? e.deltaY : e.deltaX;
+        const dy = e.shiftKey && e.deltaX === 0 ? 0 : e.deltaY;
+        setPan({ x: p.x - dx, y: p.y - dy });
+      }
     }
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -408,6 +545,10 @@ export default function ProjectCanvas() {
       sel = new Set([key]);
     }
     setSelected(sel);
+    if (key.startsWith("shot-")) {
+      const idx = Number(key.slice(5));
+      if (Number.isFinite(idx)) patch({ activeShotIdx: idx });
+    }
     const start: Record<string, { x: number; y: number }> = {};
     for (const k of sel) start[k] = posOf(k);
     if (!sel.has(key)) start[key] = posOf(key);
@@ -463,9 +604,26 @@ export default function ProjectCanvas() {
     const cw = maxX - minX + pad * 2;
     const ch = maxY - minY + pad * 2;
     const r = el.getBoundingClientRect();
-    const nz = Math.min(2, Math.max(0.2, Math.min(r.width / cw, r.height / ch)));
+    const nz = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(r.width / cw, r.height / ch)));
     setZoom(nz);
     setPan({ x: r.width / 2 - (minX + (maxX - minX) / 2) * nz, y: r.height / 2 - (minY + (maxY - minY) / 2) * nz });
+  }
+
+  // 围绕视口中心缩放（缩放按钮用）
+  function zoomAtCenter(factor: number) {
+    const el = viewportRef.current;
+    const z = zoomRef.current;
+    const p = panStateRef.current;
+    const nz = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * factor));
+    if (!el) {
+      setZoom(nz);
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    const cx = r.width / 2;
+    const cy = r.height / 2;
+    setPan({ x: cx - ((cx - p.x) / z) * nz, y: cy - ((cy - p.y) / z) * nz });
+    setZoom(nz);
   }
 
   async function addReference(file: File | undefined | null) {
@@ -511,53 +669,27 @@ export default function ProjectCanvas() {
   }
 
   const hasContent = allKeys.length > 0;
+
+  useEffect(() => {
+    if (!hasContent || didAutoFitRef.current) return;
+    didAutoFitRef.current = true;
+    const id = requestAnimationFrame(() => fitToContent());
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasContent, shots.length, importedChars.length]);
+
   const marqueeBox = marquee
     ? { x: Math.min(marquee.x0, marquee.x1), y: Math.min(marquee.y0, marquee.y1), w: Math.abs(marquee.x1 - marquee.x0), h: Math.abs(marquee.y1 - marquee.y0) }
     : null;
 
-  return (
-    <div className="relative h-full w-full overflow-hidden bg-[var(--bg-inset)]">
-      {/* 风格 DNA */}
-      <div className="absolute left-4 top-4 z-30">
-        <button
-          type="button"
-          onClick={() => setStyleOpen((o) => !o)}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium ${state.projectStyle ? "nav-item-active" : "btn-secondary"}`}
-        >
-          🎨 风格 DNA{state.projectStyle ? " · 已设" : ""}
-        </button>
-        {styleOpen && (
-          <div className="mt-1.5 w-64 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-xl">
-            <p className="mb-1.5 text-[11px] text-[var(--text-caption)]">统一全片色调/风格，注入所有首帧与视频生成</p>
-            <input
-              value={state.projectStyle}
-              onChange={(e) => patch({ projectStyle: e.target.value })}
-              placeholder="如 cinematic noir, teal-orange palette"
-              className="input-field w-full rounded-lg px-2.5 py-1.5 text-xs"
-            />
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {STYLE_PRESETS.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => patch({ projectStyle: c.value })}
-                  className={`rounded-full px-2 py-0.5 text-[11px] ${state.projectStyle === c.value ? "nav-item-active" : "btn-secondary"}`}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-            {state.projectStyle && (
-              <button type="button" onClick={() => patch({ projectStyle: "" })} className="mt-2 text-[11px] text-[var(--text-caption)] hover:text-[var(--danger)]">清除风格</button>
-            )}
-          </div>
-        )}
-      </div>
+  const immersiveInset = immersive && reserveBottomChrome;
 
+  return (
+    <div className={`relative h-full w-full overflow-hidden bg-[var(--bg-inset)] ${immersiveInset ? "pb-14" : ""}`}>
       {/* 缩放控制 */}
       <div className="absolute right-4 top-4 z-30 flex flex-col gap-1.5">
-        <button type="button" onClick={() => setZoom((z) => Math.min(2, z + 0.15))} className="btn-secondary rounded-lg p-2" title="放大"><FiZoomIn className="h-4 w-4" /></button>
-        <button type="button" onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))} className="btn-secondary rounded-lg p-2" title="缩小"><FiZoomOut className="h-4 w-4" /></button>
+        <button type="button" onClick={() => zoomAtCenter(1.2)} className="btn-secondary rounded-lg p-2" title="放大"><FiZoomIn className="h-4 w-4" /></button>
+        <button type="button" onClick={() => zoomAtCenter(1 / 1.2)} className="btn-secondary rounded-lg p-2" title="缩小"><FiZoomOut className="h-4 w-4" /></button>
         <button type="button" onClick={fitToContent} className="btn-secondary rounded-lg p-2" title="适应全部内容"><FiMaximize className="h-4 w-4" /></button>
         <span className="mt-1 text-center text-[10px] text-[var(--text-caption)]">{Math.round(zoom * 100)}%</span>
       </div>
@@ -565,9 +697,9 @@ export default function ProjectCanvas() {
       {!hasContent && (
         <div className="absolute inset-0 z-10 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-sm text-[var(--text-secondary)]">画布是空的</p>
-            <p className="mt-1 text-xs text-[var(--text-caption)]">先到「视频创作」运行编导，分镜与角色会自动铺到这里</p>
-            <a href="/ai-video" className="btn-primary mt-3 inline-block rounded-lg px-4 py-2 text-sm">去视频创作</a>
+            <p className="text-sm text-[var(--text-secondary)]">无限画布是空的</p>
+            <p className="mt-1 text-xs text-[var(--text-caption)]">先到「创作中心」运行编导，分镜与角色会自动铺到这里</p>
+            <a href="/ai-video" className="btn-primary mt-3 inline-block rounded-lg px-4 py-2 text-sm">去创作中心</a>
           </div>
         </div>
       )}
@@ -671,6 +803,16 @@ export default function ProjectCanvas() {
             const busy = framing[i];
             const sb = director?.storyboard?.[i];
             const zhSummary = [sb?.action, sb?.environment].filter(Boolean).join(" · ") || sb?.narration || "（无中文描述）";
+            const playIdx = editSequence ? playOrderIndex(state, i) : i + 1;
+            const clip = editSequence?.clips[key];
+            const durationTag = clip ? `${clip.durationSec}s` : `${shot.duration}s`;
+            const shotAspectCss = shotAspectCssForIndex(
+              i,
+              state.aspectRatio,
+              state.customAspectRatio,
+              state.shotImageMeta
+            );
+            const cardH = computeShotCardHeight(shotAspectCss);
             return (
               <Fragment key={i}>
               <div
@@ -678,7 +820,7 @@ export default function ProjectCanvas() {
                 data-card-key={key}
                 onMouseDown={(e) => onCardDown(e, key)}
                 className={`group absolute cursor-grab rounded-xl border bg-[var(--bg-surface)] shadow-lg active:cursor-grabbing ${sel ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : linking ? "border-[var(--accent)]" : "border-[var(--border)]"}`}
-                style={{ left: p.x, top: p.y, width: SHOT_W, height: SHOT_H }}
+                style={{ left: p.x, top: p.y, width: SHOT_W }}
               >
                 <div
                   onMouseDown={(e) => startLink(e, key)}
@@ -686,20 +828,28 @@ export default function ProjectCanvas() {
                   className={`absolute -right-2.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-white bg-[var(--accent)] shadow transition-opacity ${linking ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`}
                 />
                 <div className="flex items-center justify-between rounded-t-xl bg-[var(--bg-inset)] px-3 py-2">
-                  <span className="text-base font-bold text-[var(--text-primary)]">镜头 {i + 1}</span>
-                  <span className="text-sm font-medium text-[var(--text-secondary)]">{shot.duration}s</span>
+                  <span className="text-base font-bold text-[var(--text-primary)]">
+                    <span className="mr-1.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold text-white">
+                      {playIdx}
+                    </span>
+                    镜头 {i + 1}
+                  </span>
+                  <span className="text-sm font-medium text-[var(--text-secondary)]">{durationTag}</span>
                 </div>
 
-                {/* 画面预览区（始终存在） */}
-                <div className="relative h-[190px] w-full bg-black/30">
+                {/* 画面预览区：与项目画幅一致，完整显示不裁切 */}
+                <div
+                  className="relative w-full bg-black/30"
+                  style={{ aspectRatio: shotAspectCss }}
+                >
                   {frameImg ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={frameImg}
                       alt={`镜头${i + 1}`}
                       onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => setFramePreview(frameImg)}
-                      className="h-full w-full cursor-zoom-in object-cover"
+                      onClick={() => openFramePreview(frameImg)}
+                      className="h-full w-full cursor-zoom-in object-contain"
                       draggable={false}
                       title="点击查看大图"
                     />
@@ -757,7 +907,10 @@ export default function ProjectCanvas() {
                 {frameErr[i] && <p className="px-3 pb-1 text-[11px] leading-tight text-[var(--danger)] line-clamp-2">{frameErr[i]}</p>}
               </div>
               {variants[i]?.length ? (
-                <div className="absolute flex gap-1.5 rounded-lg border border-[var(--accent)] bg-[var(--bg-surface)] p-1.5 shadow-xl" style={{ left: p.x, top: p.y + SHOT_H + 8, width: SHOT_W, zIndex: 5 }}>
+                <div
+                  className="absolute flex gap-1.5 rounded-lg border border-[var(--accent)] bg-[var(--bg-surface)] p-1.5 shadow-xl"
+                  style={{ left: p.x, top: p.y + cardH + 8, width: SHOT_W, zIndex: 5 }}
+                >
                   {variants[i].map((f, vi) => (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -770,7 +923,8 @@ export default function ProjectCanvas() {
                         adoptFrame(i, f);
                         setVariants((v) => { const n = { ...v }; delete n[i]; return n; });
                       }}
-                      className="h-16 w-12 cursor-pointer rounded object-cover hover:ring-2 hover:ring-[var(--accent)]"
+                      className="h-16 w-auto max-w-[4.5rem] cursor-pointer rounded object-contain hover:ring-2 hover:ring-[var(--accent)]"
+                      style={{ aspectRatio: shotAspectCss }}
                       draggable={false}
                     />
                   ))}
@@ -820,7 +974,7 @@ export default function ProjectCanvas() {
           {canvasLinks.map((l, idx) => {
             if (!chars.some((c) => c.id === l.charId) || l.shotIdx >= shots.length) return null;
             const a = charConnectorScreen(l.charId);
-            const b = centerScreen(`shot-${l.shotIdx}`, SHOT_W, SHOT_H);
+            const b = centerScreen(`shot-${l.shotIdx}`, SHOT_W, sizeOf(`shot-${l.shotIdx}`).h);
             return (
               <g key={idx}>
                 <path d={`M ${a.x} ${a.y} C ${a.x + 60} ${a.y}, ${b.x - 60} ${b.y}, ${b.x} ${b.y}`} fill="none" stroke="var(--accent)" strokeWidth={2} opacity={0.8} />
@@ -870,23 +1024,22 @@ export default function ProjectCanvas() {
       )}
       <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={(e) => addReference(e.target.files?.[0])} />
 
-      {/* 首帧大图预览 */}
-      {framePreview && (
-        <div
-          onClick={() => setFramePreview(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={framePreview} alt="镜头首帧" className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" />
-          <button type="button" className="absolute right-6 top-6 rounded-full bg-black/60 p-2 text-white" onClick={() => setFramePreview(null)} title="关闭">
-            <FiX className="h-5 w-5" />
-          </button>
-        </div>
+      {galleryIndex !== null && frameGalleryItems.length > 0 && (
+        <ImageGalleryLightbox
+          items={frameGalleryItems}
+          index={galleryIndex}
+          onClose={() => setGalleryIndex(null)}
+          onIndexChange={setGalleryIndex}
+        />
       )}
 
       {/* 小地图 */}
       {hasContent && bounds && vpRect && (
-        <div className="absolute bottom-3 right-4 z-20 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]/90 shadow" style={{ width: MM_W, height: MM_H }} onClick={onMinimapClick}>
+        <div
+          className={`absolute right-4 z-20 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]/90 shadow ${immersiveInset ? "bottom-16" : "bottom-3"}`}
+          style={{ width: MM_W, height: MM_H }}
+          onClick={onMinimapClick}
+        >
           <svg width={MM_W} height={MM_H} className="cursor-pointer">
             {allKeys.map((k) => {
               const p = posOf(k); const s = sizeOf(k);
@@ -900,8 +1053,8 @@ export default function ProjectCanvas() {
 
       {/* 底部提示 */}
       {hasContent && (
-        <div className="absolute bottom-4 left-1/2 z-20 max-w-[92%] -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] px-5 py-2 text-center text-sm font-medium text-[var(--text-secondary)] shadow-lg">
-          拖空白平移 · 滚轮缩放 · 拖卡片右侧圆点到另一张卡连线（角色→分镜=选角）· 双击连线删除 · Shift/⌘框选 · Delete 删除
+        <div className={`absolute left-1/2 z-20 max-w-[92%] -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] px-5 py-2 text-center text-sm font-medium text-[var(--text-secondary)] shadow-lg ${immersiveInset ? "bottom-16" : "bottom-4"}`}>
+          滚轮/触控板平移 · Ctrl/⌘+滚轮缩放 · 拖空白平移 · 拖卡片右侧圆点连线（角色→分镜=选角）· 双击连线删除 · Shift/⌘框选 · Delete 删除
         </div>
       )}
     </div>

@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiDownload, FiMapPin, FiLoader, FiX, FiCheck, FiPlus, FiImage } from "react-icons/fi";
+import ImageGalleryLightbox, {
+  findGalleryIndex,
+  refImageGalleryItems,
+} from "@/app/components/workflows/shared/ImageGalleryLightbox";
 import { fileToScaledDataUrl } from "@/app/lib/image-client";
 
 type Scene = {
@@ -22,7 +26,7 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
   const [library, setLibrary] = useState<Scene[]>([]);
   const [loading, setLoading] = useState(true);
   const [picking, setPicking] = useState(false);
-  const [preview, setPreview] = useState<Scene | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,6 +55,10 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
   }, [refresh]);
 
   const imported = library.filter((s) => sceneIds.includes(s.id));
+  const galleryItems = useMemo(
+    () => refImageGalleryItems(imported, (s) => s.description),
+    [imported]
+  );
 
   function removeFromProject(id: string) {
     onChange(sceneIds.filter((x) => x !== id));
@@ -139,7 +147,11 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
                 <img
                   src={s.refImageUrl}
                   alt={s.name}
-                  onClick={() => setPreview(s)}
+                  onClick={() => {
+                    if (s.refImageUrl) {
+                      setPreviewIndex(findGalleryIndex(galleryItems, s.refImageUrl));
+                    }
+                  }}
                   className="h-14 w-14 shrink-0 cursor-zoom-in rounded-lg object-cover hover:opacity-80"
                   title="点击看大图"
                 />
@@ -155,7 +167,7 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
                     type="button"
                     onClick={() => removeFromProject(s.id)}
                     className="shrink-0 text-xs text-[var(--text-caption)] hover:text-[var(--danger)]"
-                    title="移出本项目（不删除场景库）"
+                    title="移出本项目（不删除资源中心）"
                   >
                     移除
                   </button>
@@ -166,7 +178,7 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
           ))}
         </div>
       ) : (
-        <p className="py-2 text-sm text-[var(--text-caption)]">本项目还没有场景，点下面「创建场景」或「从场景库导入」。</p>
+        <p className="py-2 text-sm text-[var(--text-caption)]">本项目还没有场景，点下面「创建场景」或「从资源中心导入」。</p>
       )}
 
       {creating ? (
@@ -218,7 +230,7 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
               className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {saving ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiPlus className="h-4 w-4" />}
-              {saving ? "保存中…" : "保存到场景库"}
+              {saving ? "保存中…" : "保存到资源中心"}
             </button>
             <button
               type="button"
@@ -231,13 +243,13 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
               取消
             </button>
           </div>
-          <p className="mt-2 text-xs text-[var(--text-caption)]">保存后会永久存入场景库，并自动加入本项目。</p>
+          <p className="mt-2 text-xs text-[var(--text-caption)]">保存后会永久存入资源中心，并自动加入本项目。</p>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={openPicker} className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium">
             <FiDownload className="h-4 w-4" />
-            从场景库导入
+            从资源中心导入
           </button>
           <button
             type="button"
@@ -258,14 +270,19 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
         <div onClick={() => setPicking(false)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
           <div onClick={(e) => e.stopPropagation()} className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] shadow-2xl">
             <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
-              <span className="text-sm font-semibold text-[var(--text-primary)]">从场景库导入场景</span>
+              <span className="text-sm font-semibold text-[var(--text-primary)]">从资源中心导入场景</span>
               <button type="button" onClick={() => setPicking(false)} className="text-[var(--text-caption)] hover:text-[var(--text-primary)]">
                 <FiX className="h-5 w-5" />
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {library.length === 0 ? (
-                <div className="py-6 text-center text-sm text-[var(--text-caption)]">场景库还是空的，先「创建场景」。</div>
+                <div className="py-6 text-center text-sm text-[var(--text-caption)]">
+                  资源中心还没有场景。
+                  <a href="/resources" className="ml-1 text-[var(--accent)] hover:underline">
+                    去资源中心新建 →
+                  </a>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {library.map((s) => {
@@ -310,21 +327,13 @@ export default function ProjectScenesPanel({ sceneIds, onChange }: Props) {
         </div>
       )}
 
-      {/* 大图浮层 */}
-      {preview?.refImageUrl && (
-        <div onClick={() => setPreview(null)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
-          <div onClick={(e) => e.stopPropagation()} className="flex max-h-full max-w-4xl flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] shadow-2xl">
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5">
-              <span className="font-mono text-sm font-semibold text-[var(--accent)]">@{preview.name}</span>
-              <button type="button" onClick={() => setPreview(null)} className="text-[var(--text-caption)] hover:text-[var(--text-primary)]">
-                <FiX className="h-5 w-5" />
-              </button>
-            </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview.refImageUrl} alt={preview.name} className="min-h-0 w-full flex-1 object-contain" />
-            <p className="border-t border-[var(--border)] px-4 py-2.5 text-xs leading-relaxed text-[var(--text-secondary)]">{preview.description}</p>
-          </div>
-        </div>
+      {previewIndex !== null && galleryItems.length > 0 && (
+        <ImageGalleryLightbox
+          items={galleryItems}
+          index={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          onIndexChange={setPreviewIndex}
+        />
       )}
     </div>
   );

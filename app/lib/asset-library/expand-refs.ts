@@ -1,5 +1,6 @@
 import { listCharacters } from "./character-store";
 import { listScenes } from "./scene-store";
+import { listProps } from "./prop-store";
 
 type RefChar = { name: string; appearance: string };
 type RefItem = { name: string; detail: string };
@@ -36,7 +37,7 @@ export function expandCharacterRefs(prompt: string, characters: RefChar[]): stri
   return out;
 }
 
-/** 从服务端角色库读取后展开（生成前最后一刻调用） */
+/** 从服务端资源中心读取角色后展开（生成前最后一刻调用） */
 export function expandCharacterRefsFromStore(prompt: string): string {
   if (!prompt.includes("@")) return prompt;
   const characters = listCharacters().map((c) => ({
@@ -46,7 +47,7 @@ export function expandCharacterRefsFromStore(prompt: string): string {
   return expandCharacterRefs(prompt, characters);
 }
 
-/** 同时展开 @角色名 和 @场景名（角色优先，再场景）——生成前最后一刻统一调用 */
+/** 同时展开 @角色名 @场景名 @道具名 — 生成前最后一刻统一调用 */
 export function expandAllRefsFromStore(prompt: string): string {
   if (!prompt.includes("@")) return prompt;
   let out = expandRefs(
@@ -56,6 +57,10 @@ export function expandAllRefsFromStore(prompt: string): string {
   out = expandRefs(
     out,
     listScenes().map((s) => ({ name: s.name, detail: s.description }))
+  );
+  out = expandRefs(
+    out,
+    listProps().map((p) => ({ name: p.name, detail: p.description }))
   );
   return out;
 }

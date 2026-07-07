@@ -12,7 +12,18 @@ import {
 } from "react-icons/fi";
 import PromptBuilder from "@/app/components/workflows/shared/PromptBuilder";
 import CameraTrajectoryPanel from "@/app/components/workflows/shared/CameraTrajectoryPanel";
+import type { BatchImageState } from "@/app/components/workflows/t2v/BatchImageGeneratePanel";
+import StoryboardImageDashboard from "@/app/components/workflows/t2v/StoryboardImageDashboard";
 import type { DirectorState } from "@/app/lib/workbench-persist/types";
+import type { ProjectCostLedger } from "@/app/lib/cost-ledger/types";
+import type { ShotTimelineEntry } from "@/app/lib/consistency-engine/types/world-style-camera";
+
+type ImageFrame = {
+  url: string;
+  assetId: string;
+  model?: string;
+  source?: string;
+};
 
 type Props = {
   director: DirectorState;
@@ -20,6 +31,28 @@ type Props = {
   onSelectShot: (index: number) => void;
   onReorder: (from: number, to: number) => void;
   onUpdatePrompt: (index: number, providerPrompt: string) => void;
+  /** 文生图模式：卡片流排版（分镜 + 提示词 + 图片） */
+  imageMode?: boolean;
+  shotImages?: Record<number, string>;
+  shotImageMeta?: Record<number, { model: string; source: string; aspectRatio?: string }>;
+  /** 项目默认画面比例，单镜未记录时使用 */
+  defaultAspectRatio?: string;
+  draftsByShot?: Record<number, ImageFrame[]>;
+  imageLoadingShot?: number | null;
+  imageBatchStatus?: Record<number, BatchImageState>;
+  imageErr?: string | null;
+  onGenerateImage?: (index: number) => void;
+  onAdoptCandidate?: (index: number, frame: ImageFrame) => void;
+  onPreviewImage?: (url: string) => void;
+  batchRunning?: boolean;
+  onRunBatch?: () => void;
+  shotFavorites?: Record<number, boolean>;
+  onToggleFavorite?: (index: number) => void;
+  onRunBatchSelected?: (indices: number[], regenerate?: boolean) => void;
+  onDeleteShots?: (indices: number[]) => void;
+  onBatchFavorite?: (indices: number[]) => void;
+  shotTimeline?: Record<number, ShotTimelineEntry>;
+  projectCostLedger?: ProjectCostLedger | null;
 };
 
 export default function StoryboardPanel({
@@ -28,17 +61,34 @@ export default function StoryboardPanel({
   onSelectShot,
   onReorder,
   onUpdatePrompt,
+  imageMode,
+  shotImages = {},
+  shotImageMeta = {},
+  defaultAspectRatio = "9:16",
+  draftsByShot = {},
+  imageLoadingShot = null,
+  imageBatchStatus = {},
+  imageErr,
+  onGenerateImage,
+  onAdoptCandidate,
+  onPreviewImage,
+  batchRunning,
+  onRunBatch,
+  shotFavorites = {},
+  onToggleFavorite,
+  onRunBatchSelected,
+  onDeleteShots,
+  onBatchFavorite,
+  shotTimeline = {},
+  projectCostLedger,
 }: Props) {
   const { storyboard, prompts } = director;
-  // 默认「直接编辑」——编导已生成好提示词，先让用户看到/改它；
-  // 「填空助手」是从零搭新提示词的可选增强（无法反向拆解已生成的英文 prompt）。
   const [mode, setMode] = useState<"builder" | "raw">("raw");
   const [videoExtracting, setVideoExtracting] = useState(false);
   const [videoErr, setVideoErr] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const videoInput = useRef<HTMLInputElement>(null);
 
-  // 把运镜指令追加到当前镜头提示词末尾
   function appendDirective(directive: string) {
     const cur = (prompts[activeShotIdx]?.providerPrompt ?? "").trim().replace(/\.\s*$/, "");
     const next = [cur, directive].filter(Boolean).join(", ") + ".";
@@ -52,7 +102,6 @@ export default function StoryboardPanel({
     onReorder(index, next);
   }
 
-  // 视频反推提示词：上传参考视频 → 抽帧 → GPT-4.1 视觉反推 → 写入当前镜头
   async function handleVideo(file: File | undefined | null) {
     if (!file || !file.type.startsWith("video/")) return;
     setVideoErr(null);
@@ -74,6 +123,33 @@ export default function StoryboardPanel({
       setVideoExtracting(false);
       if (videoInput.current) videoInput.current.value = "";
     }
+  }
+
+  if (imageMode) {
+    return (
+      <StoryboardImageDashboard
+        director={director}
+        activeShotIdx={activeShotIdx}
+        onSelectShot={onSelectShot}
+        onUpdatePrompt={onUpdatePrompt}
+        shotImages={shotImages}
+        shotImageMeta={shotImageMeta}
+        shotFavorites={shotFavorites}
+        defaultAspectRatio={defaultAspectRatio}
+        imageLoadingShot={imageLoadingShot ?? null}
+        imageBatchStatus={imageBatchStatus}
+        batchRunning={!!batchRunning}
+        onGenerateImage={(i) => onGenerateImage?.(i)}
+        onPreviewImage={(url) => onPreviewImage?.(url)}
+        onToggleFavorite={(i) => onToggleFavorite?.(i)}
+        onRunBatch={() => onRunBatch?.()}
+        onRunBatchSelected={(indices, regen) => onRunBatchSelected?.(indices, regen)}
+        onDeleteShots={(indices) => onDeleteShots?.(indices)}
+        onBatchFavorite={(indices) => onBatchFavorite?.(indices)}
+        shotTimeline={shotTimeline}
+        projectCostLedger={projectCostLedger}
+      />
+    );
   }
 
   return (
@@ -171,7 +247,8 @@ export default function StoryboardPanel({
         </div>
 
         <p className="mb-2 text-xs text-[var(--text-caption)]">
-          提示：用 <span className="font-mono text-[var(--accent)]">@角色名</span> 引用角色库里的角色，生成时自动注入外观保持一致。
+          提示：用 <span className="font-mono text-[var(--accent)]">@角色名</span> /{" "}
+          <span className="font-mono text-[var(--accent)]">@场景名</span> 引用资源中心。
         </p>
 
         <div className="mb-2 flex flex-wrap gap-2">
@@ -217,9 +294,7 @@ export default function StoryboardPanel({
         )}
 
         {mode === "builder" ? (
-          <PromptBuilder
-            onApply={(prompt) => onUpdatePrompt(activeShotIdx, prompt)}
-          />
+          <PromptBuilder onApply={(prompt) => onUpdatePrompt(activeShotIdx, prompt)} />
         ) : (
           <textarea
             className="input-field min-h-[120px] w-full rounded-lg px-3 py-2.5 text-sm leading-relaxed"

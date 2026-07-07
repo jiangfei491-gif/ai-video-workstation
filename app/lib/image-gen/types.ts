@@ -13,17 +13,21 @@ export const IMAGE_STYLE_OPTIONS: { id: ImageStyle; label: string }[] = [
   { id: "illustration", label: "插画" },
 ];
 
-export type ImageAspectRatio = "1:1" | "9:16" | "16:9";
-export type ImageClarity = "standard" | "hd" | "uhd";
+import {
+  ASPECT_RATIO_OPTIONS,
+  CLARITY_OPTIONS,
+  resolveOutputDimensions,
+  type AspectClarityFields,
+  type AspectRatioPreset,
+  type ClarityId,
+} from "@/app/lib/generation-params";
+
+export type ImageAspectRatio = AspectRatioPreset | string;
+export type ImageClarity = ClarityId;
 export type ImageCount = 1 | 2 | 4 | 8;
 
-export const IMAGE_ASPECT_OPTIONS: { id: ImageAspectRatio; label: string }[] = [
-  { id: "1:1", label: "正方形 1:1" },
-  { id: "9:16", label: "竖屏 9:16" },
-  { id: "16:9", label: "横屏 16:9" },
-];
-
-export { CLARITY_OPTIONS as IMAGE_CLARITY_OPTIONS } from "@/app/lib/generation-params";
+export const IMAGE_ASPECT_OPTIONS = ASPECT_RATIO_OPTIONS;
+export const IMAGE_CLARITY_OPTIONS = CLARITY_OPTIONS;
 
 export const IMAGE_COUNT_OPTIONS: ImageCount[] = [1, 2, 4, 8];
 
@@ -37,11 +41,14 @@ const STYLE_PROMPTS: Record<ImageStyle, string> = {
 
 export function aspectToSize(
   ratio: ImageAspectRatio,
-  clarity: ImageClarity
+  clarity: ImageClarity,
+  fields?: Partial<AspectClarityFields>
 ): "1024x1024" | "1024x1536" | "1536x1024" {
-  if (ratio === "1:1") return clarity === "uhd" ? "1024x1024" : "1024x1024";
-  if (ratio === "16:9") return clarity === "standard" ? "1536x1024" : "1536x1024";
-  return clarity === "standard" ? "1024x1536" : "1024x1536";
+  return resolveOutputDimensions({
+    aspectRatio: ratio,
+    clarity,
+    ...fields,
+  }).openAiSize;
 }
 
 export function buildImagePrompt(

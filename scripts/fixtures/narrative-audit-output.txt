@@ -1,0 +1,948 @@
+========================================================================
+一、全部 Narrative Beat（9）
+========================================================================
+
+--- BEAT_001 ---
+beatId: BEAT_001
+sourceText: "你有没有想过，一颗苹果，可以改变一个村庄的命运？\n今天，我们要讲的，是日本青森县木村家与「木村苹果」的故事。"
+beatGoal: 开篇
+narrativePurpose: 开篇
+characters: ["木村秋则"]
+environment: 未指定
+emotionalState: 中性
+informationChange: 推进本章叙事
+actionProcess: ["你有没有想过，一颗苹果，可以改变一个村庄的命运","今天，我们要讲的，是日本青森县木村家与「木村苹果」的故事"]
+reactionProcess: []
+informationReveal: 
+visualProgression: ["环境建立","人物入画","你有没有想过，一颗苹果，","今天，我们要讲的，是日本"]
+
+--- BEAT_002 ---
+beatId: BEAT_002
+sourceText: "第一章：困境\n上世纪五十年代，青森县的果农们世代以种植苹果为生。\n木村秋则的父亲，也是一名普通的苹果农户。\n然而，连续多年的农药滥用，让果园里的土壤逐渐失去活力。\n苹果树开始大面积出现斑点病。\n果实还没成熟，就已经落满一地。\n村民们说，这是老天爷在惩罚他们。\n木村秋则却不相信。\n他站在自家果园里，看着枯黄的叶片，心里只有一个念头：一定还有别的办法。"
+beatGoal: 第一章：困境
+narrativePurpose: 第一章：困境
+characters: ["木村秋则"]
+environment: 果园
+emotionalState: 中性
+informationChange: 推进本章叙事
+actionProcess: ["第一章：困境","上世纪五十年代，青森县的果农们世代以种植苹果为生","木村秋则的父亲，也是一名普通的苹果农户","然而，连续多年的农药滥用，让果园里的土壤逐渐失去活力","苹果树开始大面积出现斑点病","果实还没成熟，就已经落满一地","村民们说，这是老天爷在惩罚他们","木村秋则却不相信","他站在自家果园里，看着枯黄的叶片，心里只有一个念头：一定还有别的办法"]
+reactionProcess: []
+informationReveal: 
+visualProgression: ["环境建立","人物入画","第一章：困境","上世纪五十年代，青森县的","木村秋则的父亲，也是一名"]
+
+--- BEAT_003 ---
+beatId: BEAT_003
+sourceText: "第二章：拒绝农药\n木村秋则开始查阅资料。\n他发现，传统农业过度依赖化学药剂，反而破坏了生态平衡。\n于是，他做了一个在村里看来近乎疯狂的决定——彻底停止使用农药。\n邻居们嘲笑他：「你这是在等死。」\n妻子也一度动摇，担心全家人的生活来源。\n但木村秋则坚持在笔记本上记录每一天的变化。\n春天，他手动清除害虫。\n夏天，他在果园里铺设反光膜，增加光照。\n秋天，他观察每一棵树的反应，记录叶片的纹理、果实的颜色。"
+beatGoal: 第二章：拒绝农药
+narrativePurpose: 第二章：拒绝农药
+characters: ["木村秋则"]
+environment: 果园
+emotionalState: 情绪转折
+informationChange: 推进本章叙事
+actionProcess: ["第二章：拒绝农药","木村秋则开始查阅资料","他发现，传统农业过度依赖化学药剂，反而破坏了生态平衡","邻居们嘲笑他：「你这是在等死","但木村秋则坚持在笔记本上记录每一天的变化","春天，他手动清除害虫"]
+reactionProcess: ["于是，他做了一个在村里看来近乎疯狂的决定——彻底停止使用农药","妻子也一度动摇，担心全家人的生活来源","夏天，他在果园里铺设反光膜，增加光照","秋天，他观察每一棵树的反应，记录叶片的纹理、果实的颜色"]
+informationReveal: 他发现，传统农业过度依赖化学药剂，反而破坏了生态平衡
+visualProgression: ["环境建立","人物入画","第二章：拒绝农药","木村秋则开始查阅资料","他发现，传统农业过度依赖","关键细节","人物反应"]
+
+--- BEAT_004 ---
+beatId: BEAT_004
+sourceText: "第三章：几乎放弃\n三年过去了，苹果依然没有好转。\n财务压力越来越大，贷款到期，孩子上学的费用也成问题。\n某个冬夜，木村秋则独自坐在仓库里，面前是一筐卖不出去的烂苹果。\n他第一次认真考虑：也许，真的该放弃了。\n就在那时，他在一本旧农学杂志里看到一句话：「苹果树有自己的免疫记忆。」\n这句话，像一道光，照进了他几乎熄灭的信念。"
+beatGoal: 第三章：几乎放弃
+narrativePurpose: 第三章：几乎放弃
+characters: ["木村秋则"]
+environment: 仓库
+emotionalState: 中性
+informationChange: 推进本章叙事
+actionProcess: ["第三章：几乎放弃","三年过去了，苹果依然没有好转","财务压力越来越大，贷款到期，孩子上学的费用也成问题","某个冬夜，木村秋则独自坐在仓库里，面前是一筐卖不出去的烂苹果","他第一次认真考虑：也许，真的该放弃了","就在那时，他在一本旧农学杂志里看到一句话：「苹果树有自己的免疫记忆"]
+reactionProcess: ["这句话，像一道光，照进了他几乎熄灭的信念"]
+informationReveal: 
+visualProgression: ["环境建立","人物入画","第三章：几乎放弃","三年过去了，苹果依然没有","财务压力越来越大，贷款到","人物反应"]
+
+--- BEAT_005 ---
+beatId: BEAT_005
+sourceText: "第四章：转折点\n木村秋则开始研究苹果树的「记忆」。\n他发现，当一棵树曾经成功抵抗过某种病害，它的细胞会留下印记。\n如果能让这种印记在整片果园里传递，也许就能重建生态。\n他开始尝试用受轻度感染却自愈的苹果，制作特殊的堆肥。\n他把堆肥施在最弱的树根部，每天记录温度、湿度、土壤微生物的变化。\n村民们依然不理解，但不再当面嘲笑——他们只是摇头离开。"
+beatGoal: 第四章：转折点
+narrativePurpose: 第四章：转折点
+characters: ["木村秋则"]
+environment: 果园
+emotionalState: 中性
+informationChange: 推进本章叙事
+actionProcess: ["第四章：转折点","木村秋则开始研究苹果树的「记忆」","他发现，当一棵树曾经成功抵抗过某种病害，它的细胞会留下印记","如果能让这种印记在整片果园里传递，也许就能重建生态","他开始尝试用受轻度感染却自愈的苹果，制作特殊的堆肥","他把堆肥施在最弱的树根部，每天记录温度、湿度、土壤微生物的变化","村民们依然不理解，但不再当面嘲笑——他们只是摇头离开"]
+reactionProcess: []
+informationReveal: 他发现，当一棵树曾经成功抵抗过某种病害，它的细胞会留下印记
+visualProgression: ["环境建立","人物入画","第四章：转折点","木村秋则开始研究苹果树的","他发现，当一棵树曾经成功","关键细节"]
+
+--- BEAT_006 ---
+beatId: BEAT_006
+sourceText: "第五章：奇迹之年\n第五年春天，奇迹发生了。\n一棵被认为已经「没救」的老苹果树，突然抽出了嫩绿的新枝。\n到了秋天，这棵树上的果实，表面光滑、色泽均匀，几乎没有虫眼。\n木村秋则摘下一颗，轻轻擦拭，咬了一口。\n那种清脆、甘甜、带着阳光气息的味道，他一辈子都忘不了。\n他把这一筐苹果带到集市。\n起初，没有人愿意买——「无农药？肯定是有问题的。」\n一位路过的老人尝了一颗，沉默片刻，说：「这味道，像我小时候吃过的苹果。」"
+beatGoal: 第五章：奇迹之年
+narrativePurpose: 第五章：奇迹之年
+characters: ["木村秋则"]
+environment: 集市
+emotionalState: 情绪转折
+informationChange: 推进本章叙事
+actionProcess: ["第五章：奇迹之年","第五年春天，奇迹发生了","一棵被认为已经「没救」的老苹果树，突然抽出了嫩绿的新枝","木村秋则摘下一颗，轻轻擦拭，咬了一口","他把这一筐苹果带到集市","起初，没有人愿意买——「无农药","肯定是有问题的"]
+reactionProcess: ["到了秋天，这棵树上的果实，表面光滑、色泽均匀，几乎没有虫眼","那种清脆、甘甜、带着阳光气息的味道，他一辈子都忘不了","一位路过的老人尝了一颗，沉默片刻，说：「这味道，像我小时候吃过的苹果"]
+informationReveal: 第五年春天，奇迹发生了
+visualProgression: ["环境建立","人物入画","第五章：奇迹之年","第五年春天，奇迹发生了","一棵被认为已经「没救」的","关键细节","人物反应"]
+
+--- BEAT_007 ---
+beatId: BEAT_007
+sourceText: "第六章：传播\n消息慢慢传开。\n有美食家专门从东京赶来，只为尝一颗木村苹果。\n媒体开始报道这个「不用农药的疯子果农」。\n订单从几箱，变成几十箱，再变成几百箱。\n木村秋则并没有因此扩大规模到失控。\n他坚持每一棵树都要被照顾到，每一颗苹果都要经过手工筛选。\n他说：「我不是在卖水果，我是在分享一种信任。」"
+beatGoal: 第六章：传播
+narrativePurpose: 第六章：传播
+characters: ["木村秋则"]
+environment: 东京
+emotionalState: 情绪转折
+informationChange: 推进本章叙事
+actionProcess: ["第六章：传播","消息慢慢传开","有美食家专门从东京赶来，只为尝一颗木村苹果","媒体开始报道这个「不用农药的疯子果农」","订单从几箱，变成几十箱，再变成几百箱","木村秋则并没有因此扩大规模到失控","他坚持每一棵树都要被照顾到，每一颗苹果都要经过手工筛选","他说：「我不是在卖水果，我是在分享一种信任"]
+reactionProcess: []
+informationReveal: 
+visualProgression: ["环境建立","人物入画","第六章：传播","消息慢慢传开","有美食家专门从东京赶来，"]
+
+--- BEAT_008 ---
+beatId: BEAT_008
+sourceText: "第七章：传承\n如今，木村苹果已经成为日本高品质苹果的代表之一。\n木村秋则的儿子也回到了果园，但他带回来的，是新的理念——有机认证、可持续包装、与年轻消费者对话。\n老木村坐在树下，看着孙子在果行间奔跑。\n他常说：「土地是有记忆的，人也是。」\n一颗苹果，从被嫌弃的烂果，到改变一个家族、一个村庄，甚至一种农业观念——\n靠的不是奇迹，而是无数次在放弃边缘的选择。"
+beatGoal: 第七章：传承
+narrativePurpose: 第七章：传承
+characters: ["木村秋则"]
+environment: 果园
+emotionalState: 情绪转折
+informationChange: 推进本章叙事
+actionProcess: ["第七章：传承","如今，木村苹果已经成为日本高品质苹果的代表之一","木村秋则的儿子也回到了果园，但他带回来的，是新的理念——有机认证、可持续包装、与年轻消费者对话","老木村坐在树下，看着孙子在果行间奔跑","他常说：「土地是有记忆的，人也是","一颗苹果，从被嫌弃的烂果，到改变一个家族、一个村庄，甚至一种农业观念——","靠的不是奇迹，而是无数次在放弃边缘的选择"]
+reactionProcess: []
+informationReveal: 靠的不是奇迹，而是无数次在放弃边缘的选择
+visualProgression: ["环境建立","人物入画","第七章：传承","如今，木村苹果已经成为日","木村秋则的儿子也回到了果","关键细节"]
+
+--- BEAT_009 ---
+beatId: BEAT_009
+sourceText: "结尾\n如果你今天吃到一颗特别甜的苹果，不妨想一想：\n背后，可能有一位像木村秋则这样的人，在无数个无人知晓的清晨，独自面对空荡的果园，却依然选择相信明天。\n这就是木村苹果的故事。\n感谢收看。"
+beatGoal: 结尾
+narrativePurpose: 结尾
+characters: ["木村秋则"]
+environment: 果园
+emotionalState: 中性
+informationChange: 推进本章叙事
+actionProcess: ["如果你今天吃到一颗特别甜的苹果，不妨想一想：","背后，可能有一位像木村秋则这样的人，在无数个无人知晓的清晨，独自面对空荡的果园，却依然选择相信明天","这就是木村苹果的故事","感谢收看"]
+reactionProcess: []
+informationReveal: 
+visualProgression: ["环境建立","人物入画","如果你今天吃到一颗特别甜","背后，可能有一位像木村秋","这就是木村苹果的故事"]
+
+========================================================================
+二、全部 Narrative Shot（68，按 Beat 分组）
+========================================================================
+
+### BEAT_001 (2 shots)
+
+  shotId: SHOT_001
+  beatId: BEAT_001
+  character: 木村秋则
+  action: 你有没有想过，一颗苹果，可以改变一个村庄的命运
+  reaction: 
+  environment: 未指定
+  camera: 中景固定镜头
+  visualFocus: 你有没有想过，一颗苹果，可以改变一个村庄的命运
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_001
+
+  shotId: SHOT_002
+  beatId: BEAT_001
+  character: 木村秋则
+  action: 今天，我们要讲的，是日本青森县木村家与「木村苹果」的故事
+  reaction: 
+  environment: 未指定
+  camera: 中景固定镜头
+  visualFocus: 今天，我们要讲的，是日本青森县木村家与「木村苹果
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_001
+
+### BEAT_002 (9 shots)
+
+  shotId: SHOT_003
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 第一章：困境
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 第一章：困境
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+  shotId: SHOT_004
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 上世纪五十年代，青森县的果农们世代以种植苹果为生
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 上世纪五十年代，青森县的果农们世代以种植苹果为生
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+  shotId: SHOT_005
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 木村秋则的父亲，也是一名普通的苹果农户
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 木村秋则的父亲，也是一名普通的苹果农户
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+  shotId: SHOT_006
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 然而，连续多年的农药滥用，让果园里的土壤逐渐失去活力
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 然而，连续多年的农药滥用，让果园里的土壤逐渐失去
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+  shotId: SHOT_007
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 苹果树开始大面积出现斑点病
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 苹果树开始大面积出现斑点病
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+  shotId: SHOT_008
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 果实还没成熟，就已经落满一地
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 果实还没成熟，就已经落满一地
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+  shotId: SHOT_009
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 村民们说，这是老天爷在惩罚他们
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 村民们说，这是老天爷在惩罚他们
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+  shotId: SHOT_010
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 木村秋则却不相信
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 木村秋则却不相信
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+  shotId: SHOT_011
+  beatId: BEAT_002
+  character: 木村秋则
+  action: 他站在自家果园里，看着枯黄的叶片，心里只有一个念头：一定还有别的办法
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 他站在自家果园里，看着枯黄的叶片，心里只有一个念
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_002
+
+### BEAT_003 (11 shots)
+
+  shotId: SHOT_012
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 第二章：拒绝农药
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 第二章：拒绝农药
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_003
+
+  shotId: SHOT_013
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 木村秋则开始查阅资料
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 木村秋则开始查阅资料
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_003
+
+  shotId: SHOT_014
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 他发现，传统农业过度依赖化学药剂，反而破坏了生态平衡
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 他发现，传统农业过度依赖化学药剂，反而破坏了生态
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_003
+
+  shotId: SHOT_015
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 邻居们嘲笑他：「你这是在等死
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 邻居们嘲笑他：「你这是在等死
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_003
+
+  shotId: SHOT_016
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 但木村秋则坚持在笔记本上记录每一天的变化
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 但木村秋则坚持在笔记本上记录每一天的变化
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_003
+
+  shotId: SHOT_017
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 春天，他手动清除害虫
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 春天，他手动清除害虫
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_003
+
+  shotId: SHOT_018
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 他发现，传统农业过度依赖化学药剂，反而破坏了生态平衡
+  reaction: 
+  environment: 果园
+  camera: 特写
+  visualFocus: 关键细节
+  shotPurpose: 信息揭示
+  narrationRef: BEAT_003
+
+  shotId: SHOT_019
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 人物反应
+  reaction: 于是，他做了一个在村里看来近乎疯狂的决定——彻底停止使用农药
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 于是，他做了一个在村里看来近乎疯狂的决定——彻底
+  shotPurpose: 人物反应
+  narrationRef: BEAT_003
+
+  shotId: SHOT_020
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 人物反应
+  reaction: 妻子也一度动摇，担心全家人的生活来源
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 妻子也一度动摇，担心全家人的生活来源
+  shotPurpose: 人物反应
+  narrationRef: BEAT_003
+
+  shotId: SHOT_021
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 人物反应
+  reaction: 夏天，他在果园里铺设反光膜，增加光照
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 夏天，他在果园里铺设反光膜，增加光照
+  shotPurpose: 人物反应
+  narrationRef: BEAT_003
+
+  shotId: SHOT_022
+  beatId: BEAT_003
+  character: 木村秋则
+  action: 人物反应
+  reaction: 秋天，他观察每一棵树的反应，记录叶片的纹理、果实的颜色
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 秋天，他观察每一棵树的反应，记录叶片的纹理、果实
+  shotPurpose: 人物反应
+  narrationRef: BEAT_003
+
+### BEAT_004 (7 shots)
+
+  shotId: SHOT_023
+  beatId: BEAT_004
+  character: 木村秋则
+  action: 第三章：几乎放弃
+  reaction: 
+  environment: 仓库
+  camera: 中景固定镜头
+  visualFocus: 第三章：几乎放弃
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_004
+
+  shotId: SHOT_024
+  beatId: BEAT_004
+  character: 木村秋则
+  action: 三年过去了，苹果依然没有好转
+  reaction: 
+  environment: 仓库
+  camera: 中景固定镜头
+  visualFocus: 三年过去了，苹果依然没有好转
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_004
+
+  shotId: SHOT_025
+  beatId: BEAT_004
+  character: 木村秋则
+  action: 财务压力越来越大，贷款到期，孩子上学的费用也成问题
+  reaction: 
+  environment: 仓库
+  camera: 中景固定镜头
+  visualFocus: 财务压力越来越大，贷款到期，孩子上学的费用也成问
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_004
+
+  shotId: SHOT_026
+  beatId: BEAT_004
+  character: 木村秋则
+  action: 某个冬夜，木村秋则独自坐在仓库里，面前是一筐卖不出去的烂苹果
+  reaction: 
+  environment: 仓库
+  camera: 中景固定镜头
+  visualFocus: 某个冬夜，木村秋则独自坐在仓库里，面前是一筐卖不
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_004
+
+  shotId: SHOT_027
+  beatId: BEAT_004
+  character: 木村秋则
+  action: 他第一次认真考虑：也许，真的该放弃了
+  reaction: 
+  environment: 仓库
+  camera: 中景固定镜头
+  visualFocus: 他第一次认真考虑：也许，真的该放弃了
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_004
+
+  shotId: SHOT_028
+  beatId: BEAT_004
+  character: 木村秋则
+  action: 就在那时，他在一本旧农学杂志里看到一句话：「苹果树有自己的免疫记忆
+  reaction: 
+  environment: 仓库
+  camera: 中景固定镜头
+  visualFocus: 就在那时，他在一本旧农学杂志里看到一句话：「苹果
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_004
+
+  shotId: SHOT_029
+  beatId: BEAT_004
+  character: 木村秋则
+  action: 人物反应
+  reaction: 这句话，像一道光，照进了他几乎熄灭的信念
+  environment: 仓库
+  camera: 中景固定镜头
+  visualFocus: 这句话，像一道光，照进了他几乎熄灭的信念
+  shotPurpose: 人物反应
+  narrationRef: BEAT_004
+
+### BEAT_005 (8 shots)
+
+  shotId: SHOT_030
+  beatId: BEAT_005
+  character: 木村秋则
+  action: 第四章：转折点
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 第四章：转折点
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_005
+
+  shotId: SHOT_031
+  beatId: BEAT_005
+  character: 木村秋则
+  action: 木村秋则开始研究苹果树的「记忆」
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 木村秋则开始研究苹果树的「记忆」
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_005
+
+  shotId: SHOT_032
+  beatId: BEAT_005
+  character: 木村秋则
+  action: 他发现，当一棵树曾经成功抵抗过某种病害，它的细胞会留下印记
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 他发现，当一棵树曾经成功抵抗过某种病害，它的细胞
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_005
+
+  shotId: SHOT_033
+  beatId: BEAT_005
+  character: 木村秋则
+  action: 如果能让这种印记在整片果园里传递，也许就能重建生态
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 如果能让这种印记在整片果园里传递，也许就能重建生
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_005
+
+  shotId: SHOT_034
+  beatId: BEAT_005
+  character: 木村秋则
+  action: 他开始尝试用受轻度感染却自愈的苹果，制作特殊的堆肥
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 他开始尝试用受轻度感染却自愈的苹果，制作特殊的堆
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_005
+
+  shotId: SHOT_035
+  beatId: BEAT_005
+  character: 木村秋则
+  action: 他把堆肥施在最弱的树根部，每天记录温度、湿度、土壤微生物的变化
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 他把堆肥施在最弱的树根部，每天记录温度、湿度、土
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_005
+
+  shotId: SHOT_036
+  beatId: BEAT_005
+  character: 木村秋则
+  action: 村民们依然不理解，但不再当面嘲笑——他们只是摇头离开
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 村民们依然不理解，但不再当面嘲笑——他们只是摇头
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_005
+
+  shotId: SHOT_037
+  beatId: BEAT_005
+  character: 木村秋则
+  action: 他发现，当一棵树曾经成功抵抗过某种病害，它的细胞会留下印记
+  reaction: 
+  environment: 果园
+  camera: 特写
+  visualFocus: 关键细节
+  shotPurpose: 信息揭示
+  narrationRef: BEAT_005
+
+### BEAT_006 (11 shots)
+
+  shotId: SHOT_038
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 第五章：奇迹之年
+  reaction: 
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 第五章：奇迹之年
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_006
+
+  shotId: SHOT_039
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 第五年春天，奇迹发生了
+  reaction: 
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 第五年春天，奇迹发生了
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_006
+
+  shotId: SHOT_040
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 一棵被认为已经「没救」的老苹果树，突然抽出了嫩绿的新枝
+  reaction: 
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 一棵被认为已经「没救」的老苹果树，突然抽出了嫩绿
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_006
+
+  shotId: SHOT_041
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 木村秋则摘下一颗，轻轻擦拭，咬了一口
+  reaction: 
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 木村秋则摘下一颗，轻轻擦拭，咬了一口
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_006
+
+  shotId: SHOT_042
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 他把这一筐苹果带到集市
+  reaction: 
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 他把这一筐苹果带到集市
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_006
+
+  shotId: SHOT_043
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 起初，没有人愿意买——「无农药
+  reaction: 
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 起初，没有人愿意买——「无农药
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_006
+
+  shotId: SHOT_044
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 肯定是有问题的
+  reaction: 
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 肯定是有问题的
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_006
+
+  shotId: SHOT_045
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 第五年春天，奇迹发生了
+  reaction: 
+  environment: 集市
+  camera: 特写
+  visualFocus: 关键细节
+  shotPurpose: 信息揭示
+  narrationRef: BEAT_006
+
+  shotId: SHOT_046
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 人物反应
+  reaction: 到了秋天，这棵树上的果实，表面光滑、色泽均匀，几乎没有虫眼
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 到了秋天，这棵树上的果实，表面光滑、色泽均匀，几
+  shotPurpose: 人物反应
+  narrationRef: BEAT_006
+
+  shotId: SHOT_047
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 人物反应
+  reaction: 那种清脆、甘甜、带着阳光气息的味道，他一辈子都忘不了
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 那种清脆、甘甜、带着阳光气息的味道，他一辈子都忘
+  shotPurpose: 人物反应
+  narrationRef: BEAT_006
+
+  shotId: SHOT_048
+  beatId: BEAT_006
+  character: 木村秋则
+  action: 人物反应
+  reaction: 一位路过的老人尝了一颗，沉默片刻，说：「这味道，像我小时候吃过的苹果
+  environment: 集市
+  camera: 中景固定镜头
+  visualFocus: 一位路过的老人尝了一颗，沉默片刻，说：「这味道，
+  shotPurpose: 人物反应
+  narrationRef: BEAT_006
+
+### BEAT_007 (8 shots)
+
+  shotId: SHOT_049
+  beatId: BEAT_007
+  character: 木村秋则
+  action: 第六章：传播
+  reaction: 
+  environment: 东京
+  camera: 中景固定镜头
+  visualFocus: 第六章：传播
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_007
+
+  shotId: SHOT_050
+  beatId: BEAT_007
+  character: 木村秋则
+  action: 消息慢慢传开
+  reaction: 
+  environment: 东京
+  camera: 中景固定镜头
+  visualFocus: 消息慢慢传开
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_007
+
+  shotId: SHOT_051
+  beatId: BEAT_007
+  character: 木村秋则
+  action: 有美食家专门从东京赶来，只为尝一颗木村苹果
+  reaction: 
+  environment: 东京
+  camera: 中景固定镜头
+  visualFocus: 有美食家专门从东京赶来，只为尝一颗木村苹果
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_007
+
+  shotId: SHOT_052
+  beatId: BEAT_007
+  character: 木村秋则
+  action: 媒体开始报道这个「不用农药的疯子果农」
+  reaction: 
+  environment: 东京
+  camera: 中景固定镜头
+  visualFocus: 媒体开始报道这个「不用农药的疯子果农」
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_007
+
+  shotId: SHOT_053
+  beatId: BEAT_007
+  character: 木村秋则
+  action: 订单从几箱，变成几十箱，再变成几百箱
+  reaction: 
+  environment: 东京
+  camera: 中景固定镜头
+  visualFocus: 订单从几箱，变成几十箱，再变成几百箱
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_007
+
+  shotId: SHOT_054
+  beatId: BEAT_007
+  character: 木村秋则
+  action: 木村秋则并没有因此扩大规模到失控
+  reaction: 
+  environment: 东京
+  camera: 中景固定镜头
+  visualFocus: 木村秋则并没有因此扩大规模到失控
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_007
+
+  shotId: SHOT_055
+  beatId: BEAT_007
+  character: 木村秋则
+  action: 他坚持每一棵树都要被照顾到，每一颗苹果都要经过手工筛选
+  reaction: 
+  environment: 东京
+  camera: 中景固定镜头
+  visualFocus: 他坚持每一棵树都要被照顾到，每一颗苹果都要经过手
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_007
+
+  shotId: SHOT_056
+  beatId: BEAT_007
+  character: 木村秋则
+  action: 他说：「我不是在卖水果，我是在分享一种信任
+  reaction: 
+  environment: 东京
+  camera: 中景固定镜头
+  visualFocus: 他说：「我不是在卖水果，我是在分享一种信任
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_007
+
+### BEAT_008 (8 shots)
+
+  shotId: SHOT_057
+  beatId: BEAT_008
+  character: 木村秋则
+  action: 第七章：传承
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 第七章：传承
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_008
+
+  shotId: SHOT_058
+  beatId: BEAT_008
+  character: 木村秋则
+  action: 如今，木村苹果已经成为日本高品质苹果的代表之一
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 如今，木村苹果已经成为日本高品质苹果的代表之一
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_008
+
+  shotId: SHOT_059
+  beatId: BEAT_008
+  character: 木村秋则
+  action: 木村秋则的儿子也回到了果园，但他带回来的，是新的理念——有机认证、可持续包装、与年轻消费者对话
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 木村秋则的儿子也回到了果园，但他带回来的，是新的
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_008
+
+  shotId: SHOT_060
+  beatId: BEAT_008
+  character: 木村秋则
+  action: 老木村坐在树下，看着孙子在果行间奔跑
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 老木村坐在树下，看着孙子在果行间奔跑
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_008
+
+  shotId: SHOT_061
+  beatId: BEAT_008
+  character: 木村秋则
+  action: 他常说：「土地是有记忆的，人也是
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 他常说：「土地是有记忆的，人也是
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_008
+
+  shotId: SHOT_062
+  beatId: BEAT_008
+  character: 木村秋则
+  action: 一颗苹果，从被嫌弃的烂果，到改变一个家族、一个村庄，甚至一种农业观念——
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 一颗苹果，从被嫌弃的烂果，到改变一个家族、一个村
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_008
+
+  shotId: SHOT_063
+  beatId: BEAT_008
+  character: 木村秋则
+  action: 靠的不是奇迹，而是无数次在放弃边缘的选择
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 靠的不是奇迹，而是无数次在放弃边缘的选择
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_008
+
+  shotId: SHOT_064
+  beatId: BEAT_008
+  character: 木村秋则
+  action: 靠的不是奇迹，而是无数次在放弃边缘的选择
+  reaction: 
+  environment: 果园
+  camera: 特写
+  visualFocus: 关键细节
+  shotPurpose: 信息揭示
+  narrationRef: BEAT_008
+
+### BEAT_009 (4 shots)
+
+  shotId: SHOT_065
+  beatId: BEAT_009
+  character: 木村秋则
+  action: 如果你今天吃到一颗特别甜的苹果，不妨想一想：
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 如果你今天吃到一颗特别甜的苹果，不妨想一想：
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_009
+
+  shotId: SHOT_066
+  beatId: BEAT_009
+  character: 木村秋则
+  action: 背后，可能有一位像木村秋则这样的人，在无数个无人知晓的清晨，独自面对空荡的果园，却依然选择相信明天
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 背后，可能有一位像木村秋则这样的人，在无数个无人
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_009
+
+  shotId: SHOT_067
+  beatId: BEAT_009
+  character: 木村秋则
+  action: 这就是木村苹果的故事
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 这就是木村苹果的故事
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_009
+
+  shotId: SHOT_068
+  beatId: BEAT_009
+  character: 木村秋则
+  action: 感谢收看
+  reaction: 
+  environment: 果园
+  camera: 中景固定镜头
+  visualFocus: 感谢收看
+  shotPurpose: 动作阶段
+  narrationRef: BEAT_009
+
+========================================================================
+三、事实统计
+========================================================================
+
+每个 Beat 的 Shot 数量分布:
+  BEAT_001 = 2
+  BEAT_002 = 9
+  BEAT_003 = 11
+  BEAT_004 = 7
+  BEAT_005 = 8
+  BEAT_006 = 11
+  BEAT_007 = 8
+  BEAT_008 = 8
+  BEAT_009 = 4
+
+actionProcess vs shotCount:
+  BEAT_001: actionProcessCount=2, reactionProcessCount=0, informationRevealCount=0, visualProgressionCount=4, shotCount=2 [actionProcess==shotCount]
+  BEAT_002: actionProcessCount=9, reactionProcessCount=0, informationRevealCount=0, visualProgressionCount=5, shotCount=9 [actionProcess==shotCount]
+  BEAT_003: actionProcessCount=6, reactionProcessCount=4, informationRevealCount=1, visualProgressionCount=7, shotCount=11
+  BEAT_004: actionProcessCount=6, reactionProcessCount=1, informationRevealCount=0, visualProgressionCount=6, shotCount=7
+  BEAT_005: actionProcessCount=7, reactionProcessCount=0, informationRevealCount=1, visualProgressionCount=6, shotCount=8
+  BEAT_006: actionProcessCount=7, reactionProcessCount=3, informationRevealCount=1, visualProgressionCount=7, shotCount=11
+  BEAT_007: actionProcessCount=8, reactionProcessCount=0, informationRevealCount=0, visualProgressionCount=5, shotCount=8 [actionProcess==shotCount]
+  BEAT_008: actionProcessCount=7, reactionProcessCount=0, informationRevealCount=1, visualProgressionCount=6, shotCount=8
+  BEAT_009: actionProcessCount=4, reactionProcessCount=0, informationRevealCount=0, visualProgressionCount=5, shotCount=4 [actionProcess==shotCount]
+
+actionProcessCount == shotCount 的 Beat: 4 / 9
+
+========================================================================
+四、重复与机械镜头
+========================================================================
+连续相邻 action 重复/高度相似对数: 6
+重复对: SHOT_019~SHOT_020; SHOT_020~SHOT_021; SHOT_021~SHOT_022; SHOT_046~SHOT_047; SHOT_047~SHOT_048; SHOT_063~SHOT_064
+连续相邻 visualFocus 相同对数: 0
+visualFocus 相同 shotIds: 无
+连续相邻 camera 相同对数: 59
+weakActionShotCount: 8
+weakAction: SHOT_019(人物反应/于是，他做了一个在村里看来近乎疯狂的决定——彻底停止使用农药) | SHOT_020(人物反应/妻子也一度动摇，担心全家人的生活来源) | SHOT_021(人物反应/夏天，他在果园里铺设反光膜，增加光照) | SHOT_022(人物反应/秋天，他观察每一棵树的反应，记录叶片的纹理、果实的颜色) | SHOT_029(人物反应/这句话，像一道光，照进了他几乎熄灭的信念) | SHOT_046(人物反应/到了秋天，这棵树上的果实，表面光滑、色泽均匀，几乎没有虫眼) | SHOT_047(人物反应/那种清脆、甘甜、带着阳光气息的味道，他一辈子都忘不了) | SHOT_048(人物反应/一位路过的老人尝了一颗，沉默片刻，说：「这味道，像我小时候吃过的苹果)
+
+========================================================================
+五、Narration / 脚本污染
+========================================================================
+原脚本字符数: 1458
+Beat sourceText 总字符数: 1387
+Beat narration 总字符数: 1387
+Shot narration 非空: 0 / 68
+sourceText/原脚本: 95.1%
+Shot 旁白扩写: 无

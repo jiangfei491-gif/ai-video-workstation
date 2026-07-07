@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "bash scripts/dev.sh",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:database": "npx tsx --test database/tests/*.test.ts",
+    "workspace:init": "bash database/scripts/init-workspace.sh",
+    "migrate:unify": "bash database/scripts/run-unification.sh",
+    "opencut:zh": "bash scripts/opencut-zh/setup.sh",
+    "opencut:zh:stop": "bash scripts/opencut-zh/stop.sh"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
@@ -16,6 +21,7 @@
     "highlight.js": "^11.11.1",
     "next": "16.2.6",
     "openai": "^6.39.0",
+    "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-icons": "^5.6.0",
@@ -26,11 +32,13 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

@@ -30,7 +30,10 @@ type Body = {
   prompt?: string;
   style?: ImageStyle;
   aspectRatio?: ImageAspectRatio;
+  customAspectRatio?: string;
   clarity?: ImageClarity;
+  customClarityWidth?: number;
+  customClarityHeight?: number;
   n?: number;
   workspaceMode?: WorkspaceMode;
 };
@@ -59,11 +62,15 @@ export async function POST(req: Request) {
 
   const style = body.style ?? "realistic";
   const aspectRatio = body.aspectRatio ?? "9:16";
-  const clarity = body.clarity ?? "hd";
+  const clarity = body.clarity ?? "1080p";
   const n = Math.max(1, Math.min(8, body.n ?? 1));
   const workspaceMode = parseWorkspaceMode(body.workspaceMode);
   const prompt = buildImagePrompt(topic, userPrompt, style);
-  const size = aspectToSize(aspectRatio, clarity) as ImageSize;
+  const size = aspectToSize(aspectRatio, clarity, {
+    customAspectRatio: body.customAspectRatio,
+    customClarityWidth: body.customClarityWidth,
+    customClarityHeight: body.customClarityHeight,
+  }) as ImageSize;
   const { width, height } = parseDimensions(size);
 
   try {

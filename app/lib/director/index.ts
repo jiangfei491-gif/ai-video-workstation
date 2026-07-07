@@ -12,6 +12,11 @@ export { generateScript } from "./generate-script";
 export { generateStoryboard } from "./generate-storyboard";
 export { generateProviderPrompts } from "./generate-provider-prompts";
 export { runDirectorPipeline } from "./run-director-pipeline";
+export {
+  inferVisualSettings,
+  isDefaultVisualSettings,
+} from "./infer-visual-settings";
+export type { InferredVisualSettings } from "./visual-settings-shared";
 export { extractPromptFromImage } from "./extract-prompt-from-image";
 
 export type { PromptBlueprint, PresetChip } from "./prompt-blueprint";

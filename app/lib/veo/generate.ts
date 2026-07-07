@@ -1,7 +1,7 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
+import { tempFilePath } from "@/app/lib/storage/workspace-paths";
 import type { GenerationMode } from "@/app/lib/generation-mode";
 import {
   DEFAULT_PRODUCTION_DURATION_SEC,
@@ -52,8 +52,8 @@ function extractPreviewFirstFrame(
   videoBuffer: Buffer,
   shotId: string
 ): string | undefined {
-  const tmpVideo = path.join(os.tmpdir(), `veo-${shotId}-${randomUUID()}.mp4`);
-  const tmpFrame = path.join(os.tmpdir(), `frame-${shotId}-${randomUUID()}.png`);
+  const tmpVideo = tempFilePath(`veo-${shotId}-${randomUUID()}.mp4`);
+  const tmpFrame = tempFilePath(`frame-${shotId}-${randomUUID()}.png`);
   try {
     fs.writeFileSync(tmpVideo, videoBuffer);
     extractFirstFrameFromVideo(tmpVideo, tmpFrame);
@@ -190,7 +190,7 @@ export async function generateWithVeo(
     let firstFrameAssetId: string | undefined;
 
     if (mode === "test" && fs.existsSync(clip.filepath) && buffer.length > 20) {
-      const tmpFrame = path.join(os.tmpdir(), `frame-${randomUUID()}.png`);
+      const tmpFrame = tempFilePath(`frame-${randomUUID()}.png`);
       try {
         extractFirstFrameFromVideo(clip.filepath, tmpFrame);
         const frameBuffer = fs.readFileSync(tmpFrame);

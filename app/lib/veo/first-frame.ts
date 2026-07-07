@@ -1,16 +1,16 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
 import { spawnSync } from "child_process";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
+import { tempFilePath } from "@/app/lib/storage/workspace-paths";
 
 function getFfmpegPath(): string {
   return ffmpegInstaller.path;
 }
 
-function getVideoDurationSec(videoPath: string): number {
+export function getVideoDurationSec(videoPath: string): number {
   const result = spawnSync(
     ffprobeInstaller.path,
     [
@@ -43,7 +43,7 @@ export function extractFramesFromVideo(
 
   for (let i = 0; i < n; i++) {
     const t = duration > 0 ? duration * ((i + 0.5) / n) : 0;
-    const out = path.join(os.tmpdir(), `vframe-${randomUUID()}.png`);
+    const out = tempFilePath(`vframe-${randomUUID()}.png`);
     const result = spawnSync(
       ffmpeg,
       [

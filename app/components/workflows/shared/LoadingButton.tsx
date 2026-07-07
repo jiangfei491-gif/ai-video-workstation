@@ -10,6 +10,7 @@ type Props = {
   variant?: "primary" | "secondary";
   onClick?: () => void;
   className?: string;
+  title?: string;
 };
 
 export default function LoadingButton({
@@ -20,6 +21,7 @@ export default function LoadingButton({
   variant = "primary",
   onClick,
   className = "",
+  title,
 }: Props) {
   const base =
     variant === "primary"
@@ -29,6 +31,7 @@ export default function LoadingButton({
   return (
     <button
       type="button"
+      title={title}
       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${base} ${className}`}
       disabled={disabled || loading}
       onClick={onClick}

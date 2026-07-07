@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "AI 工作台",
-  description: "视频创作 · 动态图片 · 历史记录 · 热点中心",
+  description: "创作中心 · 历史记录 · 热点中心",
 };
 
 export default function RootLayout({

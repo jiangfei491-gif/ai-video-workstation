@@ -1,6 +1,7 @@
 import type { ExportMeta } from "@/app/lib/export/types";
 import type { SeedMode } from "@/app/lib/generation-params";
 import type { DirectorState, StoryboardShot } from "@/app/lib/workbench-persist/types";
+import type { PipelineMode } from "@/app/lib/pipeline-mode";
 import type { WorkspaceMode } from "@/app/lib/workspace-mode";
 
 export type ImageStyle =
@@ -10,9 +11,11 @@ export type ImageStyle =
   | "advertising"
   | "illustration";
 
-export type ImageAspectRatio = "1:1" | "9:16" | "16:9";
-export type ImageClarity = "standard" | "hd" | "uhd";
-export type VideoClarity = "standard" | "hd" | "uhd";
+import type { ClarityId, LegacyClarityId } from "@/app/lib/generation-params";
+
+export type ImageAspectRatio = string;
+export type ImageClarity = ClarityId | LegacyClarityId;
+export type VideoClarity = ClarityId | LegacyClarityId;
 
 export type VideoHistoryEntry = {
   id: string;
@@ -26,8 +29,9 @@ export type VideoHistoryEntry = {
     shotCount: number;
     shotDurationSec: number;
     fps: 24 | 30 | 60;
-    aspectRatio: "9:16" | "16:9";
+    aspectRatio: string;
     clarity: VideoClarity;
+    pipelineMode?: PipelineMode;
     workspaceMode: WorkspaceMode;
     characterConsistency: boolean;
     sceneConsistency: boolean;

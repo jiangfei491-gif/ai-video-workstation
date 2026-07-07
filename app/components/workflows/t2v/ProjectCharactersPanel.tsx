@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiDownload,
   FiUser,
@@ -10,6 +10,10 @@ import {
   FiPlus,
   FiImage,
 } from "react-icons/fi";
+import ImageGalleryLightbox, {
+  findGalleryIndex,
+  refImageGalleryItems,
+} from "@/app/components/workflows/shared/ImageGalleryLightbox";
 import { fileToScaledDataUrl } from "@/app/lib/image-client";
 
 type Character = {
@@ -30,7 +34,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
   const [library, setLibrary] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [picking, setPicking] = useState(false);
-  const [preview, setPreview] = useState<Character | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   // 内联新建角色表单
   const [creating, setCreating] = useState(false);
@@ -60,6 +64,10 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
   }, [refresh]);
 
   const imported = library.filter((c) => characterIds.includes(c.id));
+  const galleryItems = useMemo(
+    () => refImageGalleryItems(imported, (c) => c.appearance),
+    [imported]
+  );
 
   function removeFromProject(id: string) {
     onChange(characterIds.filter((x) => x !== id));
@@ -75,7 +83,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
 
   function openPicker() {
     setPicking(true);
-    void refresh(); // 打开时刷新，纳入在角色库页新建的角色
+    void refresh(); // 打开时刷新，纳入在资源中心页新建的角色
   }
 
   async function handleFile(file: File | undefined | null) {
@@ -98,7 +106,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
     setErr(null);
   }
 
-  // 保存到角色库（永久），并自动加入当前项目
+  // 保存到资源中心（永久），并自动加入当前项目
   async function saveToLibrary() {
     if (!name.trim()) {
       setErr("请填写角色名");
@@ -136,9 +144,9 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
   return (
     <div className="space-y-3">
       <p className="text-xs text-[var(--text-caption)]">
-        从角色库导入本项目要用的角色，分镜提示词里用{" "}
+        从资源中心导入本项目要用的角色，分镜提示词里用{" "}
         <span className="font-mono text-[var(--accent)]">@角色名</span>{" "}
-        引用。这里「移除」只移出本项目，不会删除角色库里的角色。
+        引用。这里「移除」只移出本项目，不会删除资源中心里的角色。
       </p>
 
       {/* 已导入角色 */}
@@ -158,7 +166,11 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
                 <img
                   src={c.refImageUrl}
                   alt={c.name}
-                  onClick={() => setPreview(c)}
+                  onClick={() => {
+                    if (c.refImageUrl) {
+                      setPreviewIndex(findGalleryIndex(galleryItems, c.refImageUrl));
+                    }
+                  }}
                   className="h-14 w-14 shrink-0 cursor-zoom-in rounded-lg object-cover hover:opacity-80"
                   title="点击看大图"
                 />
@@ -176,7 +188,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
                     type="button"
                     onClick={() => removeFromProject(c.id)}
                     className="shrink-0 text-xs text-[var(--text-caption)] hover:text-[var(--danger)]"
-                    title="移出本项目（不删除角色库）"
+                    title="移出本项目（不删除资源中心）"
                   >
                     移除
                   </button>
@@ -190,7 +202,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
         </div>
       ) : (
         <p className="py-2 text-sm text-[var(--text-caption)]">
-          本项目还没有角色，点下面「从角色库导入」选择。
+          本项目还没有角色，点下面「从资源中心导入」选择。
         </p>
       )}
 
@@ -253,7 +265,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
               className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {saving ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiPlus className="h-4 w-4" />}
-              {saving ? "保存中…" : "保存到角色库"}
+              {saving ? "保存中…" : "保存到资源中心"}
             </button>
             <button
               type="button"
@@ -267,7 +279,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
             </button>
           </div>
           <p className="mt-2 text-xs text-[var(--text-caption)]">
-            保存后会永久存入角色库，并自动加入本项目。
+            保存后会永久存入资源中心，并自动加入本项目。
           </p>
         </div>
       ) : (
@@ -278,7 +290,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
             className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium"
           >
             <FiDownload className="h-4 w-4" />
-            从角色库导入
+            从资源中心导入
           </button>
           <button
             type="button"
@@ -306,7 +318,7 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
           >
             <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
               <span className="text-sm font-semibold text-[var(--text-primary)]">
-                从角色库导入角色
+                从资源中心导入角色
               </span>
               <button
                 type="button"
@@ -320,9 +332,9 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {library.length === 0 ? (
                 <div className="py-6 text-center text-sm text-[var(--text-caption)]">
-                  角色库还没有角色。
-                  <a href="/characters" className="ml-1 text-[var(--accent)] hover:underline">
-                    去角色库新建 →
+                  资源中心还没有角色。
+                  <a href="/resources" className="ml-1 text-[var(--accent)] hover:underline">
+                    去资源中心新建 →
                   </a>
                 </div>
               ) : (
@@ -392,39 +404,13 @@ export default function ProjectCharactersPanel({ characterIds, onChange }: Props
         </div>
       )}
 
-      {/* 大图浮层 */}
-      {preview?.refImageUrl && (
-        <div
-          onClick={() => setPreview(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex max-h-full max-w-4xl flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] shadow-2xl"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5">
-              <span className="font-mono text-sm font-semibold text-[var(--accent)]">
-                @{preview.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPreview(null)}
-                className="text-[var(--text-caption)] hover:text-[var(--text-primary)]"
-              >
-                <FiX className="h-5 w-5" />
-              </button>
-            </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={preview.refImageUrl}
-              alt={preview.name}
-              className="min-h-0 w-full flex-1 object-contain"
-            />
-            <p className="border-t border-[var(--border)] px-4 py-2.5 text-xs leading-relaxed text-[var(--text-secondary)]">
-              {preview.appearance}
-            </p>
-          </div>
-        </div>
+      {previewIndex !== null && galleryItems.length > 0 && (
+        <ImageGalleryLightbox
+          items={galleryItems}
+          index={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          onIndexChange={setPreviewIndex}
+        />
       )}
     </div>
   );

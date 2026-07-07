@@ -4,13 +4,13 @@
 
 ## 入口
 
-启动后访问根路径 `/`，会自动跳转到 **`/ai-video`**（视频创作）。
+启动后访问根路径 `/`，会自动跳转到 **`/ai-video`**（创作中心）。
 
 导航模块：
 
 | 路由 | 模块 | 说明 |
 |------|------|------|
-| `/ai-video` | 视频创作 | 文生视频（T2V）/ 文生图（T2I）工作台，含分镜、Shot Lock、导出 |
+| `/ai-video` | 创作中心 | 文生视频（T2V）/ 文生图（T2I）工作台，含分镜、Shot Lock、导出 |
 | `/dynamic-image` | 动态图片 | 图片生成工作台 |
 | `/history` | 历史记录 | 图片/视频产物历史 |
 | `/trends` | 热点中心 | TikTok / YouTube 趋势 |
@@ -63,3 +63,13 @@ VEO_ASPECT_RATIO=9:16
 ```
 
 > ⚠️ 密钥仅放在 `.env.local`（已被 `.gitignore` 忽略），切勿提交。
+
+## Architecture Authority
+
+| 领域 | 模块 |
+|------|------|
+| Director | `runDirectorPipeline` |
+| Duration | `planNarrativeDuration` |
+| Timeline | `EditGraph.timeline` |
+
+**Rule:** Do not introduce parallel production controllers without first tracing the existing production chain.

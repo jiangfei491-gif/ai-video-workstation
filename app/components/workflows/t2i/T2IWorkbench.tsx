@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ExportPanel from "@/app/components/workflows/shared/ExportPanel";
+import ImageGalleryLightbox, {
+  findGalleryIndex,
+  type ImageGalleryItem,
+} from "@/app/components/workflows/shared/ImageGalleryLightbox";
 import LoadingButton from "@/app/components/workflows/shared/LoadingButton";
 import SeedModeControls from "@/app/components/workflows/shared/SeedModeControls";
 import WorkbenchSection from "@/app/components/workflows/shared/WorkbenchSection";
@@ -14,13 +18,13 @@ import { createDefaultExportMeta, isExportSuccess } from "@/app/lib/export/types
 import { runWorkbenchExport, resetExportMeta } from "@/app/lib/export/run-export";
 import { patchImageHistoryExport } from "@/app/lib/history/image-store";
 import {
+  aspectRatioCss,
   randomGenerationSeed,
   resolveHistorySeed,
   resolveRequestSeed,
 } from "@/app/lib/generation-params";
+import AspectClarityControls from "@/app/components/workflows/shared/AspectClarityControls";
 import {
-  IMAGE_ASPECT_OPTIONS,
-  IMAGE_CLARITY_OPTIONS,
   IMAGE_COUNT_OPTIONS,
   IMAGE_STYLE_OPTIONS,
 } from "@/app/lib/image-gen/types";
@@ -33,6 +37,22 @@ import type { WorkspaceMode } from "@/app/lib/workspace-mode";
 export default function T2IWorkbench() {
   const { state, patch } = useT2IWorkbenchStore();
   const [confirmDeleteExport, setConfirmDeleteExport] = useState(false);
+  const [imageGallery, setImageGallery] = useState<{ items: ImageGalleryItem[]; index: number } | null>(null);
+
+  const galleryItems = useMemo(
+    () =>
+      state.images.map((img, i) => ({
+        url: img.previewUrl,
+        title: `图片 ${i + 1}`,
+        caption: img.prompt || state.topic || undefined,
+      })),
+    [state.images, state.topic]
+  );
+
+  function openImageGallery(url: string) {
+    if (!galleryItems.length) return;
+    setImageGallery({ items: galleryItems, index: findGalleryIndex(galleryItems, url) });
+  }
 
   async function generateImages() {
     if (!state.topic.trim() && !state.prompt.trim()) {
@@ -49,7 +69,10 @@ export default function T2IWorkbench() {
           prompt: state.prompt,
           style: state.style,
           aspectRatio: state.aspectRatio,
+          customAspectRatio: state.customAspectRatio,
           clarity: state.clarity,
+          customClarityWidth: state.customClarityWidth,
+          customClarityHeight: state.customClarityHeight,
           n: state.imageCount,
           workspaceMode: state.workspaceMode,
         }),
@@ -246,77 +269,63 @@ export default function T2IWorkbench() {
         </WorkbenchSection>
 
         {state.images.length > 0 && (
-          <WorkbenchSection title="图片预览">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <WorkbenchSection title="生成结果">
+            <div className="dashboard-shot-grid">
               {state.images.map((img) => (
                 <button
                   key={img.id}
                   type="button"
                   onClick={() => patch({ selectedImageId: img.id })}
-                  className={`overflow-hidden rounded-lg border-2 ${
-                    state.selectedImageId === img.id
-                      ? "border-[var(--accent)]"
-                      : "border-[var(--border)]"
+                  className={`dashboard-shot-card group overflow-hidden rounded-lg text-left ${
+                    state.selectedImageId === img.id ? "ring-2 ring-[var(--accent)]" : ""
                   }`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.previewUrl} alt="" className="aspect-square w-full object-cover" />
+                  <div
+                    className="dashboard-shot-media relative w-full overflow-hidden bg-[var(--bg-inset)]"
+                    style={{
+                      aspectRatio: aspectRatioCss(
+                        state.aspectRatio,
+                        state.customAspectRatio
+                      ),
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.previewUrl}
+                      alt=""
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openImageGallery(img.previewUrl);
+                      }}
+                      className="absolute inset-0 h-full w-full cursor-zoom-in object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                  </div>
+                  <div className="dashboard-shot-footer shrink-0">
+                    <p className="truncate text-[10px] text-[var(--text-secondary)]" title={img.prompt}>
+                      {img.prompt || state.topic || "—"}
+                    </p>
+                    <p className="mt-1 text-[10px] text-[var(--text-caption)]">
+                      {img.width}×{img.height} · {img.model}
+                    </p>
+                  </div>
                 </button>
               ))}
             </div>
           </WorkbenchSection>
         )}
 
-        <WorkbenchSection title="配音">
-          <textarea
-            className="input-field min-h-[80px] w-full rounded-lg px-3 py-2.5 text-sm"
-            value={state.voiceoverText}
-            onChange={(e) => patch({ voiceoverText: e.target.value })}
-            placeholder="配音文案（可与图片搭配使用）"
-          />
-        </WorkbenchSection>
-
-        <WorkbenchSection title="字幕">
-          <textarea
-            className="input-field min-h-[80px] w-full rounded-lg px-3 py-2.5 text-sm"
-            value={state.subtitleText}
-            onChange={(e) => patch({ subtitleText: e.target.value })}
-            placeholder="字幕内容"
-          />
-        </WorkbenchSection>
-
         <WorkbenchSection title="图片设置">
           <div className="space-y-4">
-            <div>
-              <p className="workbench-label mb-2">比例</p>
-              <div className="flex flex-wrap gap-2">
-                {IMAGE_ASPECT_OPTIONS.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => patch({ aspectRatio: a.id })}
-                    className={`option-chip ${state.aspectRatio === a.id ? "option-chip-active" : ""}`}
-                  >
-                    {a.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="workbench-label mb-2">清晰度</p>
-              <div className="flex flex-wrap gap-2">
-                {IMAGE_CLARITY_OPTIONS.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => patch({ clarity: c.id })}
-                    className={`option-chip ${state.clarity === c.id ? "option-chip-active" : ""}`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <AspectClarityControls
+              aspectRatio={state.aspectRatio}
+              customAspectRatio={state.customAspectRatio}
+              clarity={state.clarity}
+              customClarityWidth={state.customClarityWidth}
+              customClarityHeight={state.customClarityHeight}
+              aspectLabel="比例"
+              clarityLabel="清晰度"
+              patch={(p) => patch(p as Partial<typeof state>)}
+            />
             <div>
               <p className="workbench-label mb-2">图片数量</p>
               <div className="flex flex-wrap gap-2">
@@ -370,6 +379,15 @@ export default function T2IWorkbench() {
               </div>
             </div>
           </div>
+        )}
+
+        {imageGallery && (
+          <ImageGalleryLightbox
+            items={imageGallery.items}
+            index={imageGallery.index}
+            onClose={() => setImageGallery(null)}
+            onIndexChange={(index) => setImageGallery((g) => (g ? { ...g, index } : null))}
+          />
         )}
 
         {state.error && (

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "workspaceRoot": "~/AI Video OS",
+  "legacyRoots": {
+    "desktopVeo": "~/Desktop/AI-Veo",
+    "projectData": ".data"
+  },
+  "createdAt": "2026-06-30T00:00:00.000Z",
+  "updatedAt": "2026-06-30T00:00:00.000Z"
+}

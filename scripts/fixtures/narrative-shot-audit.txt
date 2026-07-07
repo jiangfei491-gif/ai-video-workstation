@@ -1,0 +1,338 @@
+========================================================================
+Narrative Shot 第三轮审计 — BEAT_003 重点（第二章：拒绝农药）
+========================================================================
+
+### BEAT_003
+beatGoal: 第二章：拒绝农药
+
+--- sourceRef → sourceIntent ---
+sourceRef: 他发现，传统农业过度依赖化学药剂，反而破坏了生态平衡
+sourceIntent: PESTICIDE_HARMS_ECOSYSTEM (realization) — 发现化学药剂破坏生态平衡
+
+VisualActionUnit[] (5):
+  BEAT_003_U003 | action | subject: 木村秋则
+    visibleAction: 木村秋则翻阅农业资料
+    object: 农业资料
+    visualFocus: 资料页面
+  BEAT_003_U004 | detail | subject: 木村秋则
+    visibleAction: 木村秋则手指停在药剂使用记录页
+    object: 药剂记录
+    visualFocus: 记录页数字
+  BEAT_003_U005 | reveal | subject: 死昆虫
+    visibleAction: 枯黄叶片上散落死昆虫
+    object: 死昆虫
+    visualFocus: 叶片昆虫尸体
+  BEAT_003_U006 | detail | subject: 裸土
+    visibleAction: 树根周围裸土不见活虫
+    object: 土壤
+    visualFocus: 无昆虫活动的地面
+  BEAT_003_U007 | reaction | subject: 木村秋则
+    visibleAction: 木村秋则对照笔记后视线停住
+    object: 笔记
+    reaction: { subject: 木村秋则, visibleBehavior: 木村秋则眉头紧锁, emotion: 震惊 }
+    visualFocus: 主角停住的目光
+
+NarrativeShot[] (4):
+  [1] character: 木村秋则
+      action: 木村秋则翻阅农业资料后手指停在药剂使用记录页
+      reaction: —
+      camera: 平视大特写
+      visualFocus: 记录页数字
+      shotPurpose: 细节呈现
+  [2] character: 死昆虫
+      action: 枯黄叶片上散落死昆虫
+      reaction: —
+      camera: 平视大特写
+      visualFocus: 叶片昆虫尸体
+      shotPurpose: 信息揭示
+  [3] character: 裸土
+      action: 树根周围裸土不见活虫
+      reaction: —
+      camera: 垂直俯拍大特写
+      visualFocus: 无昆虫活动的地面
+      shotPurpose: 细节呈现
+  [4] character: 木村秋则
+      action: 木村秋则对照笔记后视线停住
+      reaction: 木村秋则眉头紧锁
+      camera: 平视近景特写
+      visualFocus: 主角停住的目光
+      shotPurpose: 人物反应
+
+--- sourceRef → sourceIntent ---
+sourceRef: 他做了一个在村里看来近乎疯狂的决定——彻底停止使用农药
+sourceIntent: STOP_USING_PESTICIDE (decision) — 主角决定彻底停止使用农药
+
+VisualActionUnit[] (4):
+  BEAT_003_U008 | action | subject: 木村秋则
+    visibleAction: 木村秋则关闭喷雾器阀门
+    object: 喷雾器
+    visualFocus: 手部关闭阀门
+  BEAT_003_U009 | action | subject: 木村秋则
+    visibleAction: 木村秋则卸下肩上喷雾器
+    object: 喷雾器
+    visualFocus: 肩背卸下设备
+  BEAT_003_U010 | detail | subject: 木村秋则
+    visibleAction: 木村秋则将喷雾器放到仓库角落
+    object: 喷雾器
+    location: 仓库
+    visualFocus: 设备搁置角落
+  BEAT_003_U011 | transition | subject: 木村秋则
+    visibleAction: 木村秋则关上仓库门
+    object: 仓库门
+    location: 仓库
+    visualFocus: 仓库门关闭
+
+NarrativeShot[] (4):
+  [1] character: 木村秋则
+      action: 木村秋则关闭喷雾器阀门
+      reaction: —
+      camera: 平视中景
+      visualFocus: 手部关闭阀门
+      shotPurpose: 动作推进
+  [2] character: 木村秋则
+      action: 木村秋则卸下肩上喷雾器
+      reaction: —
+      camera: 平视近景特写
+      visualFocus: 肩背卸下设备
+      shotPurpose: 动作推进
+  [3] character: 木村秋则
+      action: 木村秋则将喷雾器放到仓库角落
+      reaction: —
+      camera: 平视大特写
+      visualFocus: 设备搁置角落
+      shotPurpose: 细节呈现
+  [4] character: 木村秋则
+      action: 木村秋则关上仓库门
+      reaction: —
+      camera: 平视中景
+      visualFocus: 仓库门关闭
+      shotPurpose: 转场过渡
+
+--- sourceRef → sourceIntent ---
+sourceRef: 邻居们嘲笑他：「你这是在等死
+sourceIntent: NEIGHBORS_MOCK (social_pressure) — 邻居嘲笑主角的选择
+
+VisualActionUnit[] (6):
+  BEAT_003_U012 | establish | subject: 邻居们
+    visibleAction: 三名邻居站在篱笆外看向木村
+    object: 篱笆
+    location: 果园篱笆
+    visualFocus: 篱笆外人群
+  BEAT_003_U013 | action | subject: 邻居
+    visibleAction: 一名邻居抬手指向果园
+    visualFocus: 指向手势
+  BEAT_003_U014 | reaction | subject: 邻居们
+    visibleAction: 几人相互发笑
+    reaction: { subject: 邻居们, visibleBehavior: 捂嘴发笑, emotion: 嘲讽 }
+    visualFocus: 发笑表情
+  BEAT_003_U015 | reaction | subject: 木村秋则
+    visibleAction: 木村秋则停下手中修剪动作
+    object: 修枝剪
+    visualFocus: 停下的双手
+  BEAT_003_U016 | reaction | subject: 木村秋则
+    visibleAction: 木村秋则转头看向篱笆外
+    visualFocus: 转头方向
+  BEAT_003_U017 | action | subject: 木村秋则
+    visibleAction: 木村秋则低头继续修剪枝条
+    visualFocus: 重新俯身工作
+
+NarrativeShot[] (6):
+  [1] character: 邻居们
+      action: 三名邻居站在篱笆外看向木村
+      reaction: —
+      camera: 平视广角全景
+      visualFocus: 篱笆外人群
+      shotPurpose: 场景定场
+  [2] character: 邻居
+      action: 一名邻居抬手指向果园
+      reaction: —
+      camera: 平视中景
+      visualFocus: 指向手势
+      shotPurpose: 动作推进
+  [3] character: 邻居们
+      action: 几人相互发笑
+      reaction: 捂嘴发笑
+      camera: 平视近景特写
+      visualFocus: 发笑表情
+      shotPurpose: 人物反应
+  [4] character: 木村秋则
+      action: 木村秋则停下手中修剪动作
+      reaction: —
+      camera: 平视中景
+      visualFocus: 停下的双手
+      shotPurpose: 人物反应
+  [5] character: 木村秋则
+      action: 木村秋则转头看向篱笆外
+      reaction: —
+      camera: 平视中景
+      visualFocus: 转头方向
+      shotPurpose: 人物反应
+  [6] character: 木村秋则
+      action: 木村秋则低头继续修剪枝条
+      reaction: —
+      camera: 平视中景
+      visualFocus: 重新俯身工作
+      shotPurpose: 动作推进
+
+--- sourceRef → sourceIntent ---
+sourceRef: 妻子也一度动摇，担心全家人的生活来源
+sourceIntent: WIFE_FINANCIAL_FEAR (fear) — 妻子担心家庭经济来源
+
+VisualActionUnit[] (6):
+  BEAT_003_U018 | establish | subject: 妻子
+    visibleAction: 妻子坐在餐桌前
+    location: 家中餐桌
+    visualFocus: 餐桌坐姿
+  BEAT_003_U019 | reaction | subject: 妻子
+    visibleAction: 妻子翻动账本
+    object: 账本
+    visualFocus: 账本翻页
+  BEAT_003_U020 | reaction | subject: 妻子
+    visibleAction: 妻子手指停在欠款数字上
+    object: 账本
+    visualFocus: 欠款数字
+  BEAT_003_U021 | reaction | subject: 妻子
+    visibleAction: 妻子看向桌上所剩无几的钞票
+    object: 钞票
+    visualFocus: 少量现金
+  BEAT_003_U022 | reaction | subject: 妻子
+    visibleAction: 妻子抬头望向窗外果园
+    object: 窗外果园
+    reaction: { subject: 妻子, visibleBehavior: 妻子目光忧虑, emotion: 担忧生计 }
+    visualFocus: 窗外远景
+  BEAT_003_U023 | reaction | subject: 妻子
+    visibleAction: 妻子双手握紧账本边缘
+    object: 账本
+    reaction: { subject: 妻子, visibleBehavior: 妻子指节发白, emotion: 动摇 }
+    visualFocus: 握紧的双手
+
+NarrativeShot[] (6):
+  [1] character: 妻子
+      action: 妻子坐在餐桌前
+      reaction: —
+      camera: 平视广角全景
+      visualFocus: 餐桌坐姿
+      shotPurpose: 场景定场
+  [2] character: 妻子
+      action: 妻子翻动账本
+      reaction: —
+      camera: 垂直俯拍近景特写
+      visualFocus: 账本翻页
+      shotPurpose: 人物反应
+  [3] character: 妻子
+      action: 妻子手指停在欠款数字上
+      reaction: —
+      camera: 垂直俯拍中景
+      visualFocus: 欠款数字
+      shotPurpose: 人物反应
+  [4] character: 妻子
+      action: 妻子看向桌上所剩无几的钞票
+      reaction: —
+      camera: 平视近景特写
+      visualFocus: 少量现金
+      shotPurpose: 人物反应
+  [5] character: 妻子
+      action: 妻子抬头望向窗外果园
+      reaction: 妻子目光忧虑
+      camera: 平视中景
+      visualFocus: 窗外远景
+      shotPurpose: 人物反应
+  [6] character: 妻子
+      action: 妻子双手握紧账本边缘
+      reaction: 妻子指节发白
+      camera: 垂直俯拍近景特写
+      visualFocus: 握紧的双手
+      shotPurpose: 人物反应
+
+========================================================================
+BEAT_003 全量 VisualActionUnit → Shot
+========================================================================
+  BEAT_003_U001 | establish | 晨雾中的果园沿山坡展开
+  BEAT_003_U002 | action | 木村秋则从桌边拿起农业资料册
+  BEAT_003_U003 | action | 木村秋则翻阅农业资料
+  BEAT_003_U004 | detail | 木村秋则手指停在药剂使用记录页
+  BEAT_003_U005 | reveal | 枯黄叶片上散落死昆虫
+  BEAT_003_U006 | detail | 树根周围裸土不见活虫
+  BEAT_003_U007 | reaction | 木村秋则对照笔记后视线停住
+  BEAT_003_U008 | action | 木村秋则关闭喷雾器阀门
+  BEAT_003_U009 | action | 木村秋则卸下肩上喷雾器
+  BEAT_003_U010 | detail | 木村秋则将喷雾器放到仓库角落
+  BEAT_003_U011 | transition | 木村秋则关上仓库门
+  BEAT_003_U012 | establish | 三名邻居站在篱笆外看向木村
+  BEAT_003_U013 | action | 一名邻居抬手指向果园
+  BEAT_003_U014 | reaction | 几人相互发笑
+  BEAT_003_U015 | reaction | 木村秋则停下手中修剪动作
+  BEAT_003_U016 | reaction | 木村秋则转头看向篱笆外
+  BEAT_003_U017 | action | 木村秋则低头继续修剪枝条
+  BEAT_003_U018 | establish | 妻子坐在餐桌前
+  BEAT_003_U019 | reaction | 妻子翻动账本
+  BEAT_003_U020 | reaction | 妻子手指停在欠款数字上
+  BEAT_003_U021 | reaction | 妻子看向桌上所剩无几的钞票
+  BEAT_003_U022 | reaction | 妻子抬头望向窗外果园
+  BEAT_003_U023 | reaction | 妻子双手握紧账本边缘
+  BEAT_003_U024 | action | 木村秋则翻开笔记本
+  BEAT_003_U025 | detail | 木村秋则笔尖在纸上移动
+  BEAT_003_U026 | action | 木村秋则手指摘除叶上害虫
+  BEAT_003_U027 | action | 木村秋则展开反光膜铺在地面
+  BEAT_003_U028 | action | 木村秋则凑近观察果实色泽
+  BEAT_003_U029 | detail | 木村秋则触摸记录叶片纹理
+
+NarrativeShot[] (28):
+  [1] 果园 | 晨雾中的果园沿山坡展开 | 平视广角全景
+  [2] 木村秋则 | 木村秋则从桌边拿起农业资料册 | 平视中景
+  [3] 木村秋则 | 木村秋则翻阅农业资料后手指停在药剂使用记录页 | 平视大特写
+  [4] 死昆虫 | 枯黄叶片上散落死昆虫 | 平视大特写
+  [5] 裸土 | 树根周围裸土不见活虫 | 垂直俯拍大特写
+  [6] 木村秋则 | 木村秋则对照笔记后视线停住 | 平视近景特写
+  [7] 木村秋则 | 木村秋则关闭喷雾器阀门 | 平视中景
+  [8] 木村秋则 | 木村秋则卸下肩上喷雾器 | 平视近景特写
+  [9] 木村秋则 | 木村秋则将喷雾器放到仓库角落 | 平视大特写
+  [10] 木村秋则 | 木村秋则关上仓库门 | 平视中景
+  [11] 邻居们 | 三名邻居站在篱笆外看向木村 | 平视广角全景
+  [12] 邻居 | 一名邻居抬手指向果园 | 平视中景
+  [13] 邻居们 | 几人相互发笑 | 平视近景特写
+  [14] 木村秋则 | 木村秋则停下手中修剪动作 | 平视中景
+  [15] 木村秋则 | 木村秋则转头看向篱笆外 | 平视中景
+  [16] 木村秋则 | 木村秋则低头继续修剪枝条 | 平视中景
+  [17] 妻子 | 妻子坐在餐桌前 | 平视广角全景
+  [18] 妻子 | 妻子翻动账本 | 垂直俯拍近景特写
+  [19] 妻子 | 妻子手指停在欠款数字上 | 垂直俯拍中景
+  [20] 妻子 | 妻子看向桌上所剩无几的钞票 | 平视近景特写
+  [21] 妻子 | 妻子抬头望向窗外果园 | 平视中景
+  [22] 妻子 | 妻子双手握紧账本边缘 | 垂直俯拍近景特写
+  [23] 木村秋则 | 木村秋则翻开笔记本 | 平视中景
+  [24] 木村秋则 | 木村秋则笔尖在纸上移动 | 平视大特写
+  [25] 木村秋则 | 木村秋则手指摘除叶上害虫 | 平视中景
+  [26] 木村秋则 | 木村秋则展开反光膜铺在地面 | 垂直俯拍中景
+  [27] 木村秋则 | 木村秋则凑近观察果实色泽 | 平视中景
+  [28] 木村秋则 | 木村秋则触摸记录叶片纹理 | 平视大特写
+
+========================================================================
+全量 QA（9 Beat / fixture）
+========================================================================
+visualActionUnitCount: 142
+shotCount: 140
+unitToShotRatio: 0.986
+oneToOneMappingRatio: 0.986
+genericVisualActionCount: 0 (要求=0)
+abstractReactionCount: 0 (要求=0)
+subjectMismatchCount: 0 (要求=0)
+reactionSubjectMismatchCount: 0 (要求=0)
+duplicateVisualUnitCount: 0 (要求=0)
+semanticLossCount: 0 (要求=0)
+textCopyShotCount: 0 (要求=0)
+actionTooLongCount: 0 (要求=0)
+multiActionShotCount: 0 (要求=0)
+emptyReactionActionCount: 0 (要求=0)
+cameraMonotonyCount: 32
+
+每 Beat Shot 分布:
+  BEAT_001 = 1 shots (1 units)
+  BEAT_002 = 17 shots (17 units)
+  BEAT_003 = 28 shots (29 units)
+  BEAT_004 = 16 shots (16 units)
+  BEAT_005 = 22 shots (23 units)
+  BEAT_006 = 21 shots (21 units)
+  BEAT_007 = 11 shots (11 units)
+  BEAT_008 = 17 shots (17 units)
+  BEAT_009 = 7 shots (7 units)

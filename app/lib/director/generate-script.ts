@@ -1,10 +1,11 @@
 import { directorChatCompletion } from "./director-chat";
+import type { TokenCostLine } from "@/app/lib/cost-ledger/types";
 
 export async function generateScript(
   topic: string,
   title: string
-): Promise<string> {
-  const { text } = await directorChatCompletion(
+): Promise<{ script: string; usage: TokenCostLine }> {
+  const { text, usage } = await directorChatCompletion(
     "script-advanced",
     `你是 AI 原生视频编剧。根据主题和标题撰写约 60 秒中文口播脚本。
 结构：钩子(5s) → 痛点 → 方案 → 行动号召。
@@ -15,5 +16,5 @@ export async function generateScript(
 
   const script = text.trim();
   if (!script) throw new Error("未能生成脚本");
-  return script;
+  return { script, usage };
 }

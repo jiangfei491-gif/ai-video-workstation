@@ -1,16 +1,10 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
-import path from "path";
+import { readFile, writeFile } from "fs/promises";
 
-/** USD per 1M tokens */
-export const MODEL_PRICING: Record<
-  string,
-  { inputPer1M: number; outputPer1M: number }
-> = {
-  "gpt-4.1": { inputPer1M: 2.0, outputPer1M: 8.0 },
-  "gpt-4.1-mini": { inputPer1M: 0.4, outputPer1M: 1.6 },
-  "gpt-4o": { inputPer1M: 2.5, outputPer1M: 10.0 },
-  "gpt-4o-mini": { inputPer1M: 0.15, outputPer1M: 0.6 },
-};
+import { estimateCostUsd, MODEL_PRICING } from "@/app/lib/cost-ledger/pricing";
+import { getWorkspaceManager } from "@/database/workspace";
+import { runtimeDataFilePath } from "@/app/lib/storage/workspace-paths";
+
+export { MODEL_PRICING, estimateCostUsd };
 
 export type UsageRecordInput = {
   model: string;
@@ -48,8 +42,7 @@ type UsageStore = {
   lastModel: string;
 };
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const STORE_FILE = path.join(DATA_DIR, "openai-usage-stats.json");
+const STORE_FILE = runtimeDataFilePath("openai-usage-stats.json");
 
 function monthKey(): string {
   return new Date().toISOString().slice(0, 7);
@@ -77,27 +70,6 @@ function emptyStore(): UsageStore {
     todayErrors: 0,
     lastModel: "gpt-4.1",
   };
-}
-
-function normalizeModel(model: string): string {
-  const m = model.toLowerCase();
-  if (m.includes("gpt-4o-mini")) return "gpt-4o-mini";
-  if (m.includes("gpt-4.1-mini")) return "gpt-4.1-mini";
-  if (m.includes("gpt-4.1")) return "gpt-4.1";
-  if (m.includes("gpt-4o")) return "gpt-4o";
-  return model;
-}
-
-export function estimateCostUsd(
-  model: string,
-  inputTokens: number,
-  outputTokens: number
-): number {
-  const key = normalizeModel(model);
-  const pricing = MODEL_PRICING[key] ?? MODEL_PRICING["gpt-4.1"];
-  const inputCost = (inputTokens / 1_000_000) * pricing.inputPer1M;
-  const outputCost = (outputTokens / 1_000_000) * pricing.outputPer1M;
-  return inputCost + outputCost;
 }
 
 function rollStore(store: UsageStore): UsageStore {
@@ -138,7 +110,7 @@ async function readStore(): Promise<UsageStore> {
 }
 
 async function writeStore(store: UsageStore): Promise<void> {
-  await mkdir(DATA_DIR, { recursive: true });
+  getWorkspaceManager().ensureLayout();
   await writeFile(STORE_FILE, JSON.stringify(store, null, 2), "utf-8");
 }
 

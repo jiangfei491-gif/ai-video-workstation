@@ -32,8 +32,6 @@ export async function exportT2VProject(
         aspectRatio: state.aspectRatio,
         clarity: state.clarity,
         director: state.director,
-        voiceoverText: state.voiceoverText,
-        subtitleText: state.subtitleText,
         exportedAt: new Date().toISOString(),
       },
       null,
@@ -75,6 +73,34 @@ export async function exportT2VVideo(
       onProgress(40 + Math.round(p * 0.45), "正在下载资源...")
     );
     downloadBlob(new Blob([Uint8Array.from(data)], { type: "video/mp4" }), fileName);
+  });
+  return fileName;
+}
+
+export async function exportT2VShotImagesPack(
+  state: T2VWorkbenchState,
+  onProgress: (pct: number, message: string) => void
+): Promise<string> {
+  const fileName = `images_${slug(state.topic)}.zip`;
+  const entries = Object.entries(state.shotFrames ?? {}).sort(
+    ([a], [b]) => Number(a) - Number(b)
+  );
+  if (!entries.length) throw new Error("没有可导出的分镜图片");
+
+  await runStagedSteps(IMAGES_PACK_STAGES, onProgress, async () => {
+    const files: { name: string; data: Uint8Array }[] = [];
+    for (let i = 0; i < entries.length; i++) {
+      const [idx, url] = entries[i];
+      onProgress(
+        35 + Math.round((i / entries.length) * 40),
+        `正在打包镜头 ${Number(idx) + 1}…`
+      );
+      const data = await fetchAsUint8Array(url);
+      const ext = url.includes("png") ? "png" : "jpg";
+      files.push({ name: `shot_${Number(idx) + 1}.${ext}`, data });
+    }
+    const zip = createZipBlob(files);
+    downloadBlob(zip, fileName);
   });
   return fileName;
 }

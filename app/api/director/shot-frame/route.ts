@@ -1,69 +1,51 @@
 import { NextResponse } from "next/server";
-import { generateImageWithGptImage2 } from "@/app/lib/image/gpt-image-2";
-import {
-  expandAllRefsFromStore,
-  saveImageAsset,
-} from "@/app/lib/asset-library";
+import { generateShotFrame, type ShotFrameRequestBody } from "@/app/lib/director/generate-shot-frame";
 import { getOpenAIApiKey } from "@/app/lib/openai-key";
+import { recordCost } from "@/app/lib/cost-ledger/unified";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-type Body = { prompt?: string; count?: number; style?: string };
-
-/**
- * 就地生成分镜首帧（走 OpenAI gpt-image，与 Veo 额度无关）。
- * - @角色名 生成前展开为外观锚点（选角后帧里即对应角色）
- * - style = 全片风格 DNA，注入以统一色调/风格
- * - count > 1 一次扇出多个变体
- * 返回 { frames: [{ url, assetId }] }（assetId 供后续 i2v 当参考图）
- */
 export async function POST(req: Request) {
   if (!getOpenAIApiKey()) {
-    return NextResponse.json({ error: "未配置 OPENAI_API_KEY" }, { status: 503 });
+    return NextResponse.json(
+      { error: "未配置 OPENAI_API_KEY" },
+      { status: 503 }
+    );
   }
 
-  let body: Body;
+  let body: ShotFrameRequestBody;
   try {
-    body = (await req.json()) as Body;
+    body = (await req.json()) as ShotFrameRequestBody;
   } catch {
     return NextResponse.json({ error: "请求格式无效" }, { status: 400 });
   }
 
-  const raw = body.prompt?.trim();
-  if (!raw) {
-    return NextResponse.json({ error: "缺少提示词" }, { status: 400 });
-  }
-  const count = Math.max(1, Math.min(4, Math.floor(body.count ?? 1)));
-  const style = body.style?.trim();
-
-  const expanded = expandAllRefsFromStore(raw);
-  const prompt = [
-    expanded,
-    style ? `Overall style: ${style}.` : "",
-    "Cinematic film still, vertical 9:16 composition, highly detailed, consistent character design, natural lighting.",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   try {
-    const images = await generateImageWithGptImage2(prompt, "1024x1536", count);
-    const frames = images.map((image) => {
-      const asset = saveImageAsset({
-        prompt,
-        buffer: image.buffer,
-        model: image.model,
-        source: image.source,
-        width: 1024,
-        height: 1536,
+    const result = await generateShotFrame(body);
+    // 记入全平台成本总账（生图按张粗算；具体供应商由结果决定，未暴露则记通用）
+    try {
+      const prov = (result as { provider?: string; model?: string }).provider;
+      const model = (result as { model?: string }).model ?? prov ?? "image";
+      const unit = prov?.includes("gpt-image") ? 0.05 : prov?.includes("schnell") ? 0.003 : 0.025;
+      recordCost({
+        module: "创作中心",
+        operation: "生图",
+        provider: prov ?? "image",
+        model,
+        units: 1,
+        unitKind: "张",
+        costUsd: unit,
+        estimated: true,
       });
-      return { url: asset.publicUrl, assetId: asset.id };
-    });
-    return NextResponse.json({ frames });
+    } catch {
+      /* 记账失败不影响返回 */
+    }
+    return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "首帧生成失败" },
+      { error: err instanceof Error ? err.message : "生成失败" },
       { status: 502 }
     );
   }

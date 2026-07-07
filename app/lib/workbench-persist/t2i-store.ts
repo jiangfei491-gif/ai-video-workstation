@@ -16,7 +16,7 @@ import type {
   ImageStyle,
 } from "@/app/lib/image-gen/types";
 import type { WorkspaceMode } from "@/app/lib/workspace-mode";
-import { normalizeSeedFields } from "@/app/lib/generation-params";
+import { normalizeSeedFields, normalizeAspectClarityFields } from "@/app/lib/generation-params";
 import { loadJson, saveJson } from "@/app/lib/workbench-persist/storage";
 
 export type GeneratedImage = {
@@ -36,13 +36,14 @@ export type T2IWorkbenchState = {
   prompt: string;
   style: ImageStyle;
   aspectRatio: ImageAspectRatio;
+  customAspectRatio?: string;
   clarity: ImageClarity;
+  customClarityWidth?: number;
+  customClarityHeight?: number;
   imageCount: ImageCount;
   seedMode: SeedMode;
   seed: number | null;
   workspaceMode: WorkspaceMode;
-  voiceoverText: string;
-  subtitleText: string;
   images: GeneratedImage[];
   selectedImageId: string | null;
   export: ExportMeta;
@@ -58,13 +59,11 @@ const defaultState: T2IWorkbenchState = {
   prompt: "",
   style: "realistic",
   aspectRatio: "9:16",
-  clarity: "hd",
+  clarity: "1080p",
   imageCount: 1,
   seedMode: "random",
   seed: null,
   workspaceMode: "preview",
-  voiceoverText: "",
-  subtitleText: "",
   images: [],
   selectedImageId: null,
   export: createDefaultExportMeta(),
@@ -91,7 +90,7 @@ function hydrate(): void {
       merged.export = normalizeExportMeta(merged.export);
     }
     delete merged.exportRecords;
-    state = normalizeSeedFields(merged);
+    state = normalizeAspectClarityFields(normalizeSeedFields(merged));
   }
 }
 
@@ -107,7 +106,7 @@ export function getT2IState(): T2IWorkbenchState {
 
 export function setT2IState(patch: Partial<T2IWorkbenchState>): void {
   hydrate();
-  state = normalizeSeedFields({ ...state, ...patch });
+  state = normalizeAspectClarityFields(normalizeSeedFields({ ...state, ...patch }));
   emit();
 }
 
