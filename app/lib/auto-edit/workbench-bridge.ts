@@ -31,7 +31,12 @@ export function buildEditInputFromWorkbench(state: T2VWorkbenchState): BuildEdit
   const shotToImageTask = state.imageTaskMapping?.shotToImageTaskMap ?? {};
   const storyboard = director.storyboard.map((sb, shotIndex) => ({
     shotIndex,
-    duration: state.pipelineMode === "t2i" ? state.shotDurationSec : (sb.duration ?? state.shotDurationSec),
+    duration:
+      state.pipelineMode === "t2i"
+        ? (Number.isFinite(sb.duration) && sb.duration > 0
+            ? sb.duration
+            : state.shotDurationSec)
+        : (sb.duration ?? state.shotDurationSec),
     action: sb.action ?? "",
     environment: sb.environment ?? "",
     camera: sb.camera ?? "",

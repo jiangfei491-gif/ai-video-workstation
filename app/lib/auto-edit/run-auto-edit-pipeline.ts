@@ -211,7 +211,8 @@ export async function runAutoEditPipeline(
           `配音 ${ensured.synthesized.length}/${graph.timeline.voice.length} 条 · 镜 ${shots} 失败（可稍后重试）`
         );
       } else {
-        push("sync-voice", "failed", ensured.failed.map((f) => f.error).join(" · "));
+        const uniqueErr = [...new Set(ensured.failed.map((f) => f.error))].join(" · ");
+        push("sync-voice", "failed", uniqueErr);
       }
       push(
         "sync-subtitles",

@@ -129,7 +129,8 @@ export function refreshEditGraphFromWorkbench(state: T2VWorkbenchState): EditGra
     if (fresh && old) {
       clips[key] = {
         ...fresh,
-        durationSec: old.durationSec,
+        // 镜长以当前分镜规划为准（planNarrativeDuration），不保留旧 timeline 的固定 16s
+        durationSec: fresh.durationSec,
       };
     }
   }
