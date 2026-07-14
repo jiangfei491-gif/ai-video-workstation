@@ -7,6 +7,7 @@ export type AppNavId =
   | "voice-center"
   | "subtitle-center"
   | "music-center"
+  | "music"
   | "effect-center"
   | "qa-center"
   | "resources"
@@ -25,6 +26,7 @@ export const APP_NAV_ITEMS: {
   { id: "voice-center", label: "配音中心", href: "/voice-center" },
   { id: "subtitle-center", label: "字幕中心", href: "/subtitle-center" },
   { id: "music-center", label: "音乐中心", href: "/music-center" },
+  { id: "music", label: "音乐", href: "/music" },
   { id: "effect-center", label: "特效中心", href: "/effect-center" },
   { id: "qa-center", label: "质检中心", href: "/qa-center" },
   { id: "ai-video", label: "创作中心", href: "/ai-video" },

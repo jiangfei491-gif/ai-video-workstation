@@ -26,10 +26,23 @@ export const WORKSPACE_TOP_LEVEL = {
 export const STORAGE_REL = {
   projects: "storage/projects",
   library: "storage/library",
+  music: "storage/music",
   cache: "storage/cache",
   temp: "storage/temp",
   exports: "storage/exports",
   downloads: "storage/downloads",
+} as const;
+
+/** 音乐歌词模块独立存储中心（storage/music/ 下） */
+export const MUSIC_STORAGE_REL = {
+  sources: "sources",
+  parsed: "parsed",
+  public: "public",
+  original: "original",
+  evidence: "evidence",
+  versions: "versions",
+  screenshots: "screenshots",
+  logs: "logs",
 } as const;
 
 /** library 子目录 */
@@ -162,6 +175,13 @@ export function resourceCenterLibraryPath(
   key: keyof typeof RESOURCE_CENTER_LIBRARY_REL
 ): string {
   return path.join(workspaceRoot, STORAGE_REL.library, RESOURCE_CENTER_LIBRARY_REL[key]);
+}
+
+export function musicStoragePath(
+  workspaceRoot: string,
+  key: keyof typeof MUSIC_STORAGE_REL
+): string {
+  return path.join(workspaceRoot, STORAGE_REL.music, MUSIC_STORAGE_REL[key]);
 }
 
 export function modelPath(workspaceRoot: string, key: keyof typeof MODEL_REL): string {

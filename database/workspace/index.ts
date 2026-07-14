@@ -10,9 +10,11 @@ export {
   WORKSPACE_TOP_LEVEL,
   WORKSPACE_CONFIG_FILE,
   RESOURCE_CENTER_LIBRARY_REL,
+  MUSIC_STORAGE_REL,
   libraryPath,
   modelPath,
   resourceCenterLibraryPath,
+  musicStoragePath,
 } from "./paths";
 export { allWorkspaceV2Dirs, listExpectedRelativePaths } from "./layout";
 export { bootstrapWorkspace } from "./bootstrap";

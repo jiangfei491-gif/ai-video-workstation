@@ -19,6 +19,12 @@
 \ir 090_export.sql
 \ir 100_cost.sql
 \ir 110_logs.sql
+\ir 120_intelligence_center.sql
+\ir 130_music_lyrics.sql
+\ir 131_music_zh_remark.sql
+\ir 132_music_commercial_score.sql
+\ir 133_music_seed_tracks.sql
+\ir 134_music_imported_seeds.sql
 \ir 999_indexes.sql
 
 \echo 'AI Cut V1 schema complete.'
