@@ -13,10 +13,18 @@ import type { VoiceDirectorTask } from "../types";
 import type { ProviderSynthOutput, VoiceCenterProvider } from "./types";
 
 /** Edge TTS 走 Microsoft 在线 WebSocket，偶发 "No audio was received"（限流/网络抖动）。
- *  它是回退链的最后兜底，一次抖动不应拖垮整条流水线，故带指数退避重试。 */
-const EDGE_MAX_ATTEMPTS = 4;
+ *  批量口播时 Microsoft 端更易限流，故提高重试次数与退避上限。可用 EDGE_TTS_MAX_ATTEMPTS 覆盖。 */
+const EDGE_MAX_ATTEMPTS = Number(process.env.EDGE_TTS_MAX_ATTEMPTS) || 8;
+const EDGE_BACKOFF_BASE_MS = Number(process.env.EDGE_TTS_BACKOFF_BASE_MS) || 800;
+const EDGE_BACKOFF_CAP_MS = Number(process.env.EDGE_TTS_BACKOFF_CAP_MS) || 12_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function edgeBackoffMs(attempt: number): number {
+  const exp = EDGE_BACKOFF_BASE_MS * 2 ** (attempt - 1);
+  const jitter = Math.floor(Math.random() * 500);
+  return Math.min(exp + jitter, EDGE_BACKOFF_CAP_MS);
+}
 
 /** 拉取一次 Edge 合成音频，空音频视为失败以触发重试 */
 async function fetchEdgeAudio(text: string, voice: string): Promise<Buffer> {
@@ -47,9 +55,7 @@ export async function synthesizeViaEdge(
     } catch (e) {
       lastErr = e;
       if (attempt < EDGE_MAX_ATTEMPTS) {
-        // 指数退避 + 抖动，缓解 Microsoft 端限流
-        const backoff = 400 * 2 ** (attempt - 1) + Math.floor(Math.random() * 300);
-        await sleep(backoff);
+        await sleep(edgeBackoffMs(attempt));
       }
     }
   }

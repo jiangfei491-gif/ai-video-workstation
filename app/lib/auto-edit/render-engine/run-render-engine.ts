@@ -23,6 +23,8 @@ import {
   buildFinalMuxCommand,
   resolveAudioMixDurationSec,
 } from "../ffmpeg/mux-final";
+import { timelineToSequence, syncClipSpecDurations } from "../edit-graph/timeline-bridge";
+import { scaleTimelineToTargetDuration } from "../edit-graph/scale-timeline-duration";
 import { ensureVoiceClips } from "../audio/ensure-voice-clips";
 import { resolveMediaFilePath } from "../resolve-media";
 import type { EditTimeline, MediaPoolItem } from "../edit-graph/types";
@@ -86,6 +88,7 @@ function transitionsForMerge(
 export async function runRenderEngine(params: RenderEngineParams): Promise<RenderEngineResult> {
   ensureDesktopVeoLayout();
   const {
+    sequence: inputSequence,
     onProgress,
     editTimeline,
     mediaPool,
@@ -95,16 +98,14 @@ export async function runRenderEngine(params: RenderEngineParams): Promise<Rende
     voiceProvider,
     engineSettings,
     synthesizeVoice,
+    targetDurationSec,
   } = params;
 
   const settings = engineSettings;
-
-  const plan = buildRenderPlan(params);
-  const tmpDir = plan.tmpDir;
+  let cleanupDir: string | null = null;
 
   try {
     onProgress?.(5, "渲染引擎：验证素材…");
-    onProgress?.(8, `渲染引擎：${plan.validation.readyCount} 个片段就绪`);
 
     let pool = mediaPool ?? [];
     let timeline = editTimeline;
@@ -116,11 +117,32 @@ export async function runRenderEngine(params: RenderEngineParams): Promise<Rende
         mediaPool: pool,
         voiceId: voiceId ?? settings?.voice.voiceId,
         voiceProvider: voiceProvider ?? settings?.voice.provider,
-        onClip: (_i, msg) => onProgress?.(15, msg),
+        renderExport: true,
+        onProgress: (pct, msg) => onProgress?.(pct, msg),
       });
       pool = ensured.mediaPool;
       timeline = ensured.timeline;
+      if (ensured.failed.length > 0) {
+        onProgress?.(
+          40,
+          `配音完成：成功 ${ensured.synthesized.length + ensured.reused.length} · 失败 ${ensured.failed.length}`
+        );
+      }
     }
+
+    let renderSequence = inputSequence;
+
+    if (timeline?.video?.length) {
+      if (targetDurationSec && targetDurationSec > 0) {
+        timeline = scaleTimelineToTargetDuration(timeline, targetDurationSec, pool);
+      }
+      renderSequence = timelineToSequence(syncClipSpecDurations(timeline));
+    }
+
+    const plan = buildRenderPlan({ ...params, sequence: renderSequence });
+    const tmpDir = plan.tmpDir;
+    cleanupDir = tmpDir;
+    onProgress?.(45, `渲染引擎：${plan.validation.readyCount} 个片段就绪`);
 
     const total = plan.segmentCommands.length;
     const segmentPaths: string[] = [];
@@ -129,7 +151,7 @@ export async function runRenderEngine(params: RenderEngineParams): Promise<Rende
     for (let i = 0; i < total; i++) {
       const cmd = plan.segmentCommands[i];
       onProgress?.(
-        Math.round(18 + ((i + 1) / total) * 45),
+        Math.round(48 + ((i + 1) / total) * 35),
         `渲染引擎：${cmd.label}`
       );
       await runFfmpegCommand(cmd);
@@ -161,13 +183,26 @@ export async function runRenderEngine(params: RenderEngineParams): Promise<Rende
     const outputFileName = `edit-${Date.now()}-${randomUUID().slice(0, 8)}.${useProres ? "mov" : "mp4"}`;
     const outputPath = desktopVideoPath(outputFileName);
 
-    const voiceInputs: { path: string; startSec: number }[] = [];
+    const voiceInputs: { path: string; startSec: number; durationSec: number }[] = [];
     if (timeline?.voice?.length) {
-      for (const clip of timeline.voice) {
+      const seenShots = new Set<number>();
+      const sortedVoice = [...timeline.voice].sort((a, b) => a.startSec - b.startSec);
+      for (const clip of sortedVoice) {
+        const m = /^narr-(\d+)$/.exec(clip.sourceKey);
+        const shotIdx = m ? Number(m[1]) : null;
+        if (shotIdx !== null && seenShots.has(shotIdx)) continue;
+        if (shotIdx !== null) seenShots.add(shotIdx);
+
         const item = pool.find((p) => p.id === clip.mediaRefId);
         const url = item?.url;
         const fp = resolveMediaFilePath(url);
-        if (fp) voiceInputs.push({ path: fp, startSec: clip.startSec });
+        if (fp) {
+          voiceInputs.push({
+            path: fp,
+            startSec: clip.startSec,
+            durationSec: Math.max(0.3, clip.durationSec),
+          });
+        }
       }
     }
 
@@ -272,10 +307,12 @@ export async function runRenderEngine(params: RenderEngineParams): Promise<Rende
       plan,
     };
   } finally {
-    try {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    } catch {
-      /* ignore */
+    if (cleanupDir) {
+      try {
+        fs.rmSync(cleanupDir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 }

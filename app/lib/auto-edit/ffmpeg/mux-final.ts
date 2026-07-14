@@ -25,7 +25,7 @@ export function resolveAudioMixDurationSec(params: {
 }
 
 export type AudioMixInput = {
-  voicePaths: { path: string; startSec: number; volume?: number }[];
+  voicePaths: { path: string; startSec: number; durationSec?: number; volume?: number }[];
   bgmPath?: string | null;
   bgmVolume?: number;
   bgmStartSec?: number;
@@ -55,13 +55,23 @@ export function buildAudioMixCommand(params: {
     args.push("-i", v.path);
     const delayMs = Math.round(v.startSec * 1000);
     const vol = v.volume ?? 1;
-    const post = buildVoicePostFilter(`[${inputIdx}:a]`, `va${inputIdx}`, audioPost ?? {});
+    const srcLabel = `vsrc${inputIdx}`;
+    const trimmedLabel = `[${srcLabel}]`;
+    if (v.durationSec != null && v.durationSec > 0) {
+      filters.push(
+        `[${inputIdx}:a]atrim=0:${v.durationSec.toFixed(3)},asetpts=PTS-STARTPTS[${srcLabel}]`
+      );
+    }
+    const inputLabel = v.durationSec != null && v.durationSec > 0 ? trimmedLabel : `[${inputIdx}:a]`;
+    const post = buildVoicePostFilter(inputLabel, `va${inputIdx}`, audioPost ?? {});
     if (post) {
-      filters.push(`${post};[va${inputIdx}]adelay=${delayMs}|${delayMs},volume=${vol}[vad${inputIdx}]`);
+      filters.push(
+        `${post};[va${inputIdx}]adelay=${delayMs}|${delayMs},volume=${vol}[vad${inputIdx}]`
+      );
       voiceLabels.push(`[vad${inputIdx}]`);
     } else {
       filters.push(
-        `[${inputIdx}:a]adelay=${delayMs}|${delayMs},volume=${vol}[va${inputIdx}]`
+        `${inputLabel}adelay=${delayMs}|${delayMs},volume=${vol}[va${inputIdx}]`
       );
       voiceLabels.push(`[va${inputIdx}]`);
     }
@@ -72,7 +82,7 @@ export function buildAudioMixCommand(params: {
   if (voiceLabels.length > 0) {
     voiceOut = "voicebus";
     filters.push(
-      `${voiceLabels.join("")}amix=inputs=${voiceLabels.length}:duration=longest:dropout_transition=0[${voiceOut}]`
+      `${voiceLabels.join("")}amix=inputs=${voiceLabels.length}:duration=longest:dropout_transition=0:normalize=0[${voiceOut}]`
     );
   }
 

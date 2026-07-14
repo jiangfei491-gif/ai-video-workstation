@@ -202,8 +202,8 @@ export async function runAutoEditPipeline(
       };
       // 单镜头配音失败不再拖垮整批：有一条成功就继续走字幕，失败镜头列在消息里供事后重试
       if (ensured.failed.length === 0) {
-        push("sync-voice", "done", `配音 ${ensured.synthesized.length} 条`);
-      } else if (ensured.synthesized.length > 0) {
+        push("sync-voice", "done", `配音 ${ensured.synthesized.length + ensured.reused.length} 条`);
+      } else if (ensured.synthesized.length + ensured.reused.length > 0) {
         const shots = ensured.failed.map((f) => f.shotIndex + 1).join("、");
         push(
           "sync-voice",
@@ -211,7 +211,8 @@ export async function runAutoEditPipeline(
           `配音 ${ensured.synthesized.length}/${graph.timeline.voice.length} 条 · 镜 ${shots} 失败（可稍后重试）`
         );
       } else {
-        push("sync-voice", "failed", ensured.failed.map((f) => f.error).join(" · "));
+        const uniqueErr = [...new Set(ensured.failed.map((f) => f.error))].join(" · ");
+        push("sync-voice", "failed", uniqueErr);
       }
       push(
         "sync-subtitles",

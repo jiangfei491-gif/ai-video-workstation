@@ -12,7 +12,7 @@ import type { EditRenderMode, EditSequence } from "@/app/lib/auto-edit/types";
 import type { T2VWorkbenchState } from "@/app/lib/workbench-persist/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 600;
 
 export async function POST(req: Request) {
   try {
@@ -33,12 +33,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "请先生成剪辑方案" }, { status: 400 });
     }
 
-    const sequence = syncClipAssetsFromWorkbench(rawSeq, input);
     const refreshed = refreshEditGraphFromWorkbench(body.workbench);
     const editGraph = injectBgmIntoGraph(
       refreshed ?? body.workbench.editGraph,
       body.workbench.editBgmUrl,
       body.workbench.editBgmVolume
+    );
+
+    const sequence = syncClipAssetsFromWorkbench(
+      editGraph ? graphToSequence(editGraph) : rawSeq,
+      input
     );
 
     const job = createEditJob();
@@ -61,6 +65,10 @@ export async function POST(req: Request) {
       voiceProvider: body.workbench.editEngineSettings?.voice.provider,
       engineSettings: body.workbench.editEngineSettings,
       synthesizeVoice: body.synthesizeVoice !== false,
+      targetDurationSec:
+        body.workbench.targetDurationMinutes && body.workbench.targetDurationMinutes > 0
+          ? Math.round(body.workbench.targetDurationMinutes * 60)
+          : undefined,
     });
 
     return NextResponse.json({ jobId: job.id });
@@ -76,11 +84,17 @@ async function runRenderJob(
   jobId: string,
   params: Parameters<typeof runRenderEngine>[0]
 ): Promise<void> {
+  let lastProgress = 0;
+  let lastMessage = "渲染引擎准备中…";
+
   try {
     const result = await runRenderEngine({
       ...params,
-      onProgress: (pct, msg) =>
-        updateEditJob(jobId, { status: "rendering", progress: pct, message: msg }),
+      onProgress: (pct, msg) => {
+        lastProgress = pct;
+        lastMessage = msg;
+        updateEditJob(jobId, { status: "rendering", progress: pct, message: msg });
+      },
     });
 
     updateEditJob(jobId, {
@@ -93,8 +107,8 @@ async function runRenderJob(
   } catch (err) {
     updateEditJob(jobId, {
       status: "failed",
-      progress: 0,
-      message: "渲染失败",
+      progress: lastProgress,
+      message: lastMessage || "渲染失败",
       error: err instanceof Error ? err.message : String(err),
       completedAt: new Date().toISOString(),
     });

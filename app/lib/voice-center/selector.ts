@@ -13,6 +13,10 @@ export function resolveProviderChain(task: VoiceDirectorTask): VoiceCenterProvid
     return [task.provider];
   }
 
+  if (task.renderExport) {
+    return resolveRenderExportChain();
+  }
+
   if (task.preferLocal || task.budget === "low") {
     return sortedProviders(DEFAULT_LOCAL_CHAIN);
   }
@@ -28,4 +32,12 @@ export function resolveProviderChain(task: VoiceDirectorTask): VoiceCenterProvid
   }
 
   return local;
+}
+
+/** 成片渲染：云端优先，本地仅作兜底（避免 fish-speech 404 等拖垮进度） */
+function resolveRenderExportChain(): VoiceCenterProviderId[] {
+  const primary: VoiceCenterProviderId[] = ["edge-tts", "elevenlabs"];
+  if (process.env.OPENAI_API_KEY?.trim()) primary.push("openai-audio");
+  const local = sortedProviders(DEFAULT_LOCAL_CHAIN).filter((id) => !primary.includes(id));
+  return sortedProviders([...primary, ...local]);
 }

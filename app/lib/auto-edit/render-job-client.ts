@@ -1,5 +1,15 @@
 import type { EditRenderJob } from "./types";
 
+/** 查询服务端当前进行中的渲染任务（无则 null） */
+export async function fetchActiveEditRenderJob(): Promise<EditRenderJob | null> {
+  const res = await fetch("/api/auto-edit/jobs/active", { cache: "no-store" });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { job?: EditRenderJob | null };
+  const job = data.job ?? null;
+  if (!job || (job.status !== "rendering" && job.status !== "planning")) return null;
+  return job;
+}
+
 export type RenderJobPollHandlers = {
   onProgress?: (pct: number, message: string) => void;
 };

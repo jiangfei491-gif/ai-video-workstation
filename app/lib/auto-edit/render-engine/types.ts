@@ -81,6 +81,8 @@ export type RenderEngineParams = {
   engineSettings?: EditEngineSettings;
   /** 渲染前自动 TTS，默认 true */
   synthesizeVoice?: boolean;
+  /** 目标成片秒数；超出时按比例压缩时间线 */
+  targetDurationSec?: number;
   onProgress?: (pct: number, msg: string) => void;
 };
 

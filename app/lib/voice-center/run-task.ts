@@ -1,5 +1,6 @@
 import type {
   VoiceCenterLogEntry,
+  VoiceCenterProviderId,
   VoiceCenterResult,
   VoiceDirectorTask,
 } from "./types";
@@ -77,17 +78,29 @@ export async function runVoiceCenterTask(
     }
   }
 
-  // 最终兼容回退
-  if (!chain.includes("edge-tts")) {
-    const edge = getVoiceCenterProvider("edge-tts");
-    if (edge) {
-      try {
-        const out = await edge.synthesize(task);
-        const result = toVoiceCenterResult(task, "edge-tts", out, "success");
-        return result;
-      } catch {
-        /* ignore */
-      }
+  // 最终兼容回退（链中未包含时补试）
+  const fallbacks: VoiceCenterProviderId[] = [];
+  if (!chain.includes("edge-tts")) fallbacks.push("edge-tts");
+  if (!chain.includes("elevenlabs")) fallbacks.push("elevenlabs");
+
+  for (const fbId of fallbacks) {
+    if (!isProviderEnabled(fbId)) continue;
+    const fb = getVoiceCenterProvider(fbId);
+    if (!fb) continue;
+    const health = await fb.healthCheck();
+    if (!health.ok) {
+      errors.push(`${fbId}: ${health.message ?? "不可用"}`);
+      continue;
+    }
+    try {
+      let out = await fb.synthesize(task);
+      out = await postProcessVoice(task, out);
+      const result = toVoiceCenterResult(task, fbId, out, "success");
+      setCachedResult(task, fbId, result);
+      return result;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      errors.push(`${fbId}: ${msg}`);
     }
   }
 

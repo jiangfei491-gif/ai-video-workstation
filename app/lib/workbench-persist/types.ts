@@ -248,6 +248,8 @@ export type T2VWorkbenchState = {
   editEngineSettings: import("@/app/lib/auto-edit/engines/edit-settings").EditEngineSettings;
   editRendering: boolean;
   editError: string | null;
+  /** 全局渲染进度（跨页面轮询同步） */
+  editRenderProgress: { pct: number; message: string } | null;
   /** AI 自动剪辑生成的封面图 */
   editCoverImageUrl: string | null;
   /** 画布 / 剪辑中心 UI 状态（切换导航后保留） */

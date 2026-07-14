@@ -17,6 +17,7 @@ import type {
   StoryboardShot,
   T2VWorkbenchState,
 } from "@/app/lib/workbench-persist/types";
+import { buildDirectorMediaPatch } from "@/app/lib/image-task/remap-director-media";
 import { shotIdFromIndex } from "@/app/lib/shared/shot-id";
 
 export type DirectorApiResponse = {
@@ -103,6 +104,8 @@ export function buildDirectorWorkbenchPatch(
       ? clearDownstreamForDirectorChange()
       : {};
 
+  const mediaPatch = buildDirectorMediaPatch(prev, finalStoryboard, imageTaskMapping);
+
   return {
     sourceScript: fullScript || prev.sourceScript,
     director: {
@@ -125,22 +128,7 @@ export function buildDirectorWorkbenchPatch(
           cameraTemplateId: data.visualSettings.cameraTemplateId,
         }
       : {}),
-    testResult: null,
-    shotLock: null,
-    prodResult: null,
-    batchRunning: false,
-    batchResults: {},
-    shotFrames: {},
-    shotFrameAssets: {},
-    shotImageMeta: {},
-    shotFavorites: {},
-    shotTimeline: {},
-    imageTaskFrames: {},
-    imageTaskFrameAssets: {},
-    imageTaskTimeline: {},
-    veoStatus: "idle",
-    veoError: null,
-    veoSuccessMessage: null,
+    ...mediaPatch,
     ...(data.costDetail
       ? { projectCostLedger: ledgerFromDirector(data.costDetail) }
       : { projectCostLedger: null }),

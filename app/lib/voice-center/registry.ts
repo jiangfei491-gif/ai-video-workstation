@@ -1,11 +1,12 @@
 import type { VoiceCenterProviderId, VoiceProviderConfig } from "./types";
 
-/** 默认回退链：本地重型 → edge-tts 兜底（本地在弱机健康检查失败时，保证仍有可用免费引擎，避免哑音） */
+/** 默认回退链：本地 → edge-tts（免费）→ ElevenLabs（edge 限流时的云端兜底） */
 export const DEFAULT_LOCAL_CHAIN: VoiceCenterProviderId[] = [
   "f5-tts",
   "fish-speech",
   "cosyvoice",
   "edge-tts",
+  "elevenlabs",
 ];
 
 export const ULTRA_CLOUD_CHAIN: VoiceCenterProviderId[] = ["elevenlabs"];

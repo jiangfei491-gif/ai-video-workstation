@@ -3,6 +3,7 @@ import {
   buildCompatImageTasksFromDirector,
   assertImageBudgetCompliance,
 } from "@/app/lib/image-task";
+import { buildDirectorMediaPatch } from "@/app/lib/image-task/remap-director-media";
 import { shotIdFromIndex } from "@/app/lib/image-task/shot-id";
 import { DEFAULT_T2I_SHOT_DURATION_SEC } from "@/app/lib/shot-control/plan-from-script";
 import type { DirectorPipelineResult } from "@/app/lib/director/types";
@@ -82,7 +83,7 @@ export function applyDirectorPipelineToWorkbench(
 
   const preserve = opts?.preserveGeneratedMedia ?? false;
   const mediaReset = preserve
-    ? {}
+    ? buildDirectorMediaPatch(state, finalStoryboard, imageTaskMapping)
     : {
         testResult: null,
         shotLock: null,

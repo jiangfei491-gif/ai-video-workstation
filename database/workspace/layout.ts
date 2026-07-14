@@ -4,6 +4,7 @@ import {
   DATABASE_REL,
   LIBRARY_REL,
   MODEL_REL,
+  MUSIC_STORAGE_REL,
   PROJECT_REL,
   RESOURCE_CENTER_LIBRARY_REL,
   STORAGE_REL,
@@ -39,11 +40,17 @@ export function allStorageDirs(root: string): string[] {
   return [
     path.join(root, STORAGE_REL.projects),
     path.join(root, STORAGE_REL.library),
+    path.join(root, STORAGE_REL.music),
     path.join(root, STORAGE_REL.cache),
     path.join(root, STORAGE_REL.temp),
     path.join(root, STORAGE_REL.exports),
     path.join(root, STORAGE_REL.downloads),
   ];
+}
+
+export function allMusicStorageDirs(root: string): string[] {
+  const music = path.join(root, STORAGE_REL.music);
+  return Object.values(MUSIC_STORAGE_REL).map((rel) => path.join(music, rel));
 }
 
 export function allLibraryDirs(root: string): string[] {
@@ -72,6 +79,7 @@ export function allWorkspaceV2Dirs(root: string, projectId?: string): string[] {
     ...allTopLevelDirs(root),
     ...allDatabaseDirs(root),
     ...allStorageDirs(root),
+    ...allMusicStorageDirs(root),
     ...allLibraryDirs(root),
     ...allResourceCenterLibraryDirs(root),
     ...allModelDirs(root),

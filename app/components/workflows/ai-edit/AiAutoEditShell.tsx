@@ -6,7 +6,6 @@ import { useCallback, useMemo, useState } from "react";
 import { FiDownload, FiPlay, FiRefreshCw, FiSliders } from "react-icons/fi";
 import { getT2VState, useT2VWorkbenchStore } from "@/app/lib/workbench-persist/t2v-store";
 import { graphToSequence, refreshEditGraphFromWorkbench } from "@/app/lib/auto-edit";
-import { pollEditRenderJob } from "@/app/lib/auto-edit/render-job-client";
 import type { AutoEditStepResult } from "@/app/lib/auto-edit/run-auto-edit-pipeline";
 import {
   isDirectorPlanStale,
@@ -35,6 +34,8 @@ export default function AiAutoEditShell() {
   const [steps, setSteps] = useState<AutoEditStepResult[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | undefined>();
   const [renderProgress, setRenderProgress] = useState({ pct: 0, message: "" });
+  const globalRenderProgress = state.editRenderProgress;
+  const displayProgress = state.editRendering && globalRenderProgress ? globalRenderProgress : renderProgress;
 
   const director = state.director;
   const graph = state.editGraph;
@@ -153,7 +154,12 @@ export default function AiAutoEditShell() {
       return;
     }
 
-    patch({ editRendering: true, editError: null, finalEditVideoUrl: null });
+    patch({
+      editRendering: true,
+      editError: null,
+      finalEditVideoUrl: null,
+      editRenderProgress: { pct: 0, message: "正在启动渲染…" },
+    });
     setRenderProgress({ pct: 0, message: "正在导出视频…" });
     try {
       const res = await fetch("/api/auto-edit/render", {
@@ -169,18 +175,11 @@ export default function AiAutoEditShell() {
       if (!res.ok || !data.jobId) throw new Error(data.error ?? "导出启动失败");
 
       patch({ editRenderJobId: data.jobId });
-      const job = await pollEditRenderJob(data.jobId, {
-        onProgress: (pct, message) => setRenderProgress({ pct, message }),
-      });
-
-      patch({
-        finalEditVideoUrl: job.outputUrl ?? null,
-        editRendering: false,
-        editError: job.outputUrl ? null : "渲染完成但未生成视频地址",
-      });
+      // 进度由全局 EditRenderJobTracker 轮询并写回 editRenderProgress
     } catch (err) {
       patch({
         editRendering: false,
+        editRenderProgress: null,
         editError: err instanceof Error ? err.message : String(err),
       });
     }
@@ -257,7 +256,7 @@ export default function AiAutoEditShell() {
               playerTitle="视频预览"
               finalEditVideoUrl={state.finalEditVideoUrl}
               editRendering={state.editRendering}
-              renderProgress={renderProgress}
+              renderProgress={displayProgress}
               playheadSec={playheadSec}
               durationSec={durationSec}
               currentLabel={director.title}
@@ -284,8 +283,11 @@ export default function AiAutoEditShell() {
 
         {state.editRendering && (
           <>
-            <EditRenderProgressPanel progress={renderProgress.pct} message={renderProgress.message} />
-            {renderProgress.pct >= 92 && renderProgress.pct < 100 && (
+            <EditRenderProgressPanel
+              progress={displayProgress.pct}
+              message={displayProgress.message}
+            />
+            {displayProgress.pct >= 92 && displayProgress.pct < 100 && (
               <p className="text-[11px] text-[var(--text-caption)]">
                 最终编码阶段 CPU 占用高、耗时较长，进度可能停在 92% 附近；可切到其他页面，后台会继续渲染。
               </p>
@@ -325,7 +327,7 @@ export default function AiAutoEditShell() {
           <LoadingButton
             variant="secondary"
             loading={state.editRendering}
-            loadingText={`导出中 ${Math.round(renderProgress.pct)}%`}
+            loadingText={`导出中 ${Math.round(displayProgress.pct)}%`}
             onClick={() => void runExport()}
             className="flex-1"
           >
