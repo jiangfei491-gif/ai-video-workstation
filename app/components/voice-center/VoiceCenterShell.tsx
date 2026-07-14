@@ -26,6 +26,7 @@ import {
 } from "@/app/lib/voice-center/client-settings";
 import { getT2VState, useT2VWorkbenchStore } from "@/app/lib/workbench-persist/t2v-store";
 import type { EditGraph } from "@/app/lib/auto-edit/edit-graph/types";
+import { graphToSequence } from "@/app/lib/auto-edit/edit-graph/timeline-bridge";
 
 type ProviderRow = {
   id: VoiceCenterProviderId;
@@ -178,7 +179,11 @@ export default function VoiceCenterShell() {
       };
       if (!res.ok) throw new Error(data.error ?? "项目配音失败");
       if (data.editGraph) {
-        patch({ editGraph: data.editGraph, editVoiceId: settings.voiceId });
+        patch({
+          editGraph: data.editGraph,
+          editSequence: graphToSequence(data.editGraph),
+          editVoiceId: settings.voiceId,
+        });
       }
       const count = data.synthesized?.length ?? 0;
       if (count > 0) {

@@ -46,6 +46,8 @@ export type VoiceDirectorTask = {
   accent?: string;
   /** 显式指定引擎（导演已选好则跳过自动选择） */
   provider?: VoiceCenterProviderId;
+  /** 成片渲染导出：优先 edge-tts / ElevenLabs，减少不可用本地引擎阻塞 */
+  renderExport?: boolean;
   /** 用户开启「超高质量」时允许云端 ElevenLabs */
   ultraQuality?: boolean;
   preferLocal?: boolean;

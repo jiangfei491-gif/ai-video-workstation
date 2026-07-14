@@ -49,6 +49,8 @@ export async function synthesizeVoiceToDesktop(params: {
   voiceCenterProvider?: VoiceCenterProviderId;
   ultraQuality?: boolean;
   quality?: import("@/app/lib/voice-center").VoiceQualityHint;
+  /** 成片渲染：云端 TTS 优先 */
+  renderExport?: boolean;
 }): Promise<VoiceSynthResult> {
   const text = params.text.trim();
   if (!text) throw new Error("口播文本为空");
@@ -93,6 +95,7 @@ export async function synthesizeVoiceToDesktop(params: {
     ultraQuality: params.ultraQuality,
     quality: params.quality,
     outputPath,
+    renderExport: params.renderExport,
   });
 
   if (result.status === "failed") {

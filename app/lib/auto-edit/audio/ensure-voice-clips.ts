@@ -1,4 +1,5 @@
 import type { EditTimeline, MediaPoolItem } from "../edit-graph/types";
+import { findExistingVoiceOnDisk } from "./reuse-voice-file";
 import { synthesizeVoiceToDesktop } from "./synthesize-voice";
 import { alignTimelineAfterVoiceSynth, parseShotIndexFromNarrKey } from "./align-voice-subtitle";
 import { alignSubtitlesWithWhisper } from "./transcribe-align";
@@ -23,6 +24,7 @@ export type VoiceEnsureResult = {
   mediaPool: MediaPoolItem[];
   timeline: EditTimeline;
   synthesized: number[];
+  reused: number[];
   failed: { shotIndex: number; error: string }[];
 };
 
@@ -35,13 +37,29 @@ export async function ensureVoiceClips(params: {
   voiceCenterProvider?: VoiceCenterProviderId;
   ultraQuality?: boolean;
   quality?: VoiceQualityHint;
+  /** 成片渲染模式：云端 TTS 优先 + 复用磁盘配音 */
+  renderExport?: boolean;
   onClip?: (shotIndex: number, message: string) => void;
-  onProgress?: (message: string) => void;
+  onProgress?: (pct: number, message: string) => void;
 }): Promise<VoiceEnsureResult> {
   const pool = params.mediaPool.map((p) => ({ ...p }));
   const timeline = { ...params.timeline, voice: [...params.timeline.voice] };
   const synthesized: number[] = [];
+  const reused: number[] = [];
   const failed: { shotIndex: number; error: string }[] = [];
+
+  const pending = timeline.voice.filter((clip) => {
+    const shotIndex = parseShotFromKey(clip.sourceKey);
+    if (shotIndex === null) return false;
+    const poolId = clip.mediaRefId ?? `voice-script-${shotIndex}`;
+    const item = pool.find((p) => p.id === poolId);
+    const text = item?.text ?? clip.label;
+    if (!text?.trim()) return false;
+    return !(item?.status === "ready" && item.url);
+  });
+
+  const total = Math.max(1, pending.length);
+  let done = 0;
 
   for (const clip of timeline.voice) {
     const shotIndex = parseShotFromKey(clip.sourceKey);
@@ -57,10 +75,40 @@ export async function ensureVoiceClips(params: {
       continue;
     }
 
-    params.onClip?.(shotIndex, `配音 · 镜 ${shotIndex + 1}`);
+    const pctBase = 12;
+    const pctSpan = 28;
+    const report = (msg: string) => {
+      const pct = Math.round(pctBase + (done / total) * pctSpan);
+      params.onProgress?.(pct, msg);
+      params.onClip?.(shotIndex, msg);
+    };
+
+    report(`配音 · 镜 ${shotIndex + 1}/${timeline.voice.length}`);
+
+    const existing = findExistingVoiceOnDisk(shotIndex);
+    if (existing) {
+      const idx = pool.findIndex((p) => p.id === poolId);
+      const nextItem: MediaPoolItem = {
+        id: poolId,
+        kind: "voice",
+        label: `口播 · 镜 ${shotIndex + 1}`,
+        url: existing.url,
+        text,
+        shotIndex,
+        origin: "tts",
+        status: "ready",
+      };
+      if (idx >= 0) pool[idx] = nextItem;
+      else pool.push(nextItem);
+      clip.mediaRefId = poolId;
+      clip.durationSec = existing.durationSec;
+      reused.push(shotIndex);
+      done++;
+      continue;
+    }
+
     await paceBatchVoiceSynth();
 
-    // 单镜头配音失败不应拖垮整批：记录失败、保留原镜长估算，继续下一镜
     try {
       const synth = await synthesizeVoiceToDesktop({
         text,
@@ -70,6 +118,7 @@ export async function ensureVoiceClips(params: {
         voiceCenterProvider: params.voiceCenterProvider,
         ultraQuality: params.ultraQuality,
         quality: params.quality,
+        renderExport: params.renderExport ?? true,
       });
 
       const idx = pool.findIndex((p) => p.id === poolId);
@@ -105,18 +154,26 @@ export async function ensureVoiceClips(params: {
 
       clip.mediaRefId = poolId;
       failed.push({ shotIndex, error: e instanceof Error ? e.message : String(e) });
-      params.onClip?.(shotIndex, `配音 · 镜 ${shotIndex + 1} 失败`);
+      report(`配音 · 镜 ${shotIndex + 1} 失败，继续下一镜`);
     }
+    done++;
   }
 
+  params.onProgress?.(40, "配音对齐时间线…");
   const aligned = alignTimelineAfterVoiceSynth(timeline, pool);
-  const whisperAligned = await alignSubtitlesWithWhisper(
-    aligned,
-    pool,
-    (msg) => params.onProgress?.(msg)
+  const whisperAligned = await alignSubtitlesWithWhisper(aligned, pool, (msg) =>
+    params.onProgress?.(42, msg)
   );
 
-  return { mediaPool: pool, timeline: whisperAligned, synthesized, failed };
+  if (failed.length > 0 && synthesized.length === 0 && reused.length === 0) {
+    const sample = failed
+      .slice(0, 3)
+      .map((f) => `镜${f.shotIndex + 1}`)
+      .join("、");
+    console.warn(`[ensureVoiceClips] 全部配音失败（${failed.length} 镜），示例：${sample}`);
+  }
+
+  return { mediaPool: pool, timeline: whisperAligned, synthesized, reused, failed };
 }
 
 function parseShotFromKey(key: string): number | null {

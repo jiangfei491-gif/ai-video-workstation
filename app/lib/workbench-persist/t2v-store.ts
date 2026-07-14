@@ -105,6 +105,7 @@ const defaultState: T2VWorkbenchState = {
   editEngineSettings: mergeEditEngineSettings(),
   editRendering: false,
   editError: null,
+  editRenderProgress: null,
   editCoverImageUrl: null,
   canvasUi: { ...DEFAULT_CANVAS_UI },
   error: null,
@@ -287,6 +288,7 @@ function applyHydratedState(saved: T2VWorkbenchState): void {
   merged.editEngineSettings = mergeEditEngineSettings(merged.editEngineSettings);
   merged.editRendering = merged.editRendering ?? false;
   merged.editError = merged.editError ?? null;
+  merged.editRenderProgress = merged.editRenderProgress ?? null;
   merged.canvasUi = normalizeCanvasUi(merged.canvasUi);
   state = restoreSourceScriptFromCache(
     normalizeAspectClarityFields(normalizeSeedFields(merged))

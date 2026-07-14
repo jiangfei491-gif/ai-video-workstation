@@ -104,6 +104,7 @@ export default function CanvasEditShell({ advancedOnly = false }: { advancedOnly
     [patch]
   );
 
+  /** 轮询渲染任务进度（保留供单页内即时反馈；全局 Tracker 为主） */
   const waitForRenderJob = useCallback((jobId: string) => {
     if (pollRef.current) clearInterval(pollRef.current);
 
@@ -150,15 +151,7 @@ export default function CanvasEditShell({ advancedOnly = false }: { advancedOnly
     if (cur.finalEditVideoUrl && !cur.editRendering) return;
 
     if (cur.editRendering) {
-      void waitForRenderJob(jobId)
-        .then(applyRenderJobResult)
-        .catch((err) => {
-          patch({
-            editRendering: false,
-            editError: err instanceof Error ? err.message : String(err),
-          });
-          setRenderProgress({ pct: 0, message: "" });
-        });
+      // 全局 EditRenderJobTracker 负责轮询
       return;
     }
 
@@ -646,7 +639,12 @@ export default function CanvasEditShell({ advancedOnly = false }: { advancedOnly
   const runRender = useCallback(async () => {
     const seq = syncEditAssets();
     if (!seq) return;
-    patch({ editRendering: true, editError: null, finalEditVideoUrl: null });
+    patch({
+      editRendering: true,
+      editError: null,
+      finalEditVideoUrl: null,
+      editRenderProgress: { pct: 0, message: "渲染引擎准备中…" },
+    });
     setRenderProgress({ pct: 0, message: "渲染引擎准备中…" });
     try {
       const res = await fetch("/api/auto-edit/render", {
@@ -658,18 +656,19 @@ export default function CanvasEditShell({ advancedOnly = false }: { advancedOnly
       if (!res.ok || !data.jobId) throw new Error(data.error ?? "渲染启动失败");
 
       patch({ editRenderJobId: data.jobId });
-      const job = await waitForRenderJob(data.jobId);
-      applyRenderJobResult(job);
     } catch (err) {
       patch({
         editRendering: false,
+        editRenderProgress: null,
         editError: err instanceof Error ? err.message : String(err),
       });
       setRenderProgress({ pct: 0, message: "" });
     }
-  }, [syncEditAssets, patch, renderMode, waitForRenderJob, applyRenderJobResult]);
+  }, [syncEditAssets, patch, renderMode]);
 
   const onFocusHandled = useCallback(() => setFocusShotIndex(null), []);
+
+  const effectiveRenderProgress = state.editRenderProgress ?? renderProgress;
 
   const fusionHandlers = useMemo(
     () =>
@@ -682,7 +681,7 @@ export default function CanvasEditShell({ advancedOnly = false }: { advancedOnly
             transitionApplyLoading,
             beatApplyLoading,
             renderMode,
-            renderProgress,
+            renderProgress: effectiveRenderProgress,
             onPatchWorkbench: patch,
             onPatchGraph: patchEditGraph,
             onPatchCanvasUi: patchCanvasUi,
@@ -720,7 +719,7 @@ export default function CanvasEditShell({ advancedOnly = false }: { advancedOnly
       transitionApplyLoading,
       beatApplyLoading,
       renderMode,
-      renderProgress,
+      effectiveRenderProgress,
       patch,
       patchEditGraph,
       patchCanvasUi,
